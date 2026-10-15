@@ -35,31 +35,6 @@ python3 -m unittest discover -s scripts/tests -p 'test_*.py'
 
 Build outputs, local caches and signing-certificate exports are ignored and should not be committed. CLI checks do not replace runtime checks for hover, focus, clipboard and permissions.
 
-## 0.1.1 hotfix
-
-Ignore Accessibility image-source URLs when hovering emoji and reactions, including Teams desktop and PWA. Enclosing hyperlinks and direct links to image files remain supported.
-
-## Build a GitHub release
-
-No paid Apple Developer account is required for this self-signed workflow. The release script archives and signs locally; it does not notarize the app or publish to GitHub.
-
-Create a **Self Signed Root / Code Signing** certificate named **LinkPeek Release** in Keychain Access, or import your existing certificate together with its private key into your login keychain. An exported `.p12` in the repository folder is only a backup; the script uses the installed Keychain identity. Keep that certificate and private key for later releases and store a protected backup. Signing may prompt for Keychain access.
-
-```sh
-scripts/release.sh
-```
-
-For a differently named certificate, use `LINKPEEK_SIGNING_IDENTITY='Your certificate name' scripts/release.sh`. Use `LINKPEEK_SIGNING_IDENTITY=- scripts/release.sh` only for local ad-hoc testing; those ZIPs have an `-adhoc` suffix and should not replace the self-signed release.
-
-The script archives Release unsigned, signs the app and embedded libraries, verifies the signature, rejects home-directory paths and email addresses in signing-authority metadata, then creates:
-
-- `build/release/LinkPeek-0.1.1.zip`
-- `build/release/LinkPeek-0.1.1.zip.sha256`
-
-Names use the built marketing version. Archives remain under `build/release/archive.*`; the script preserves earlier archives. Keep all signing material private: `.p12`, `.pfx`, `.cer`, `.crt`, `.pem` and `.key` files are ignored.
-
-Before publishing, test the packaged app from Applications, including Settings focus, Copy Link/QR, Accessibility and launch at login. Review and commit the matching source, then push it. In [New release](https://github.com/nqnhut92/LinkPeek/releases/new), create a matching version tag (for example `v0.1.1`) at that commit, attach the ZIP and SHA-256 file, and include the installation instructions above. Save a draft for review before publishing. Bump the marketing version for subsequent releases rather than replacing an existing version's assets.
-
 See [technical design](docs/TECHNICAL_DESIGN.md) for architecture, UI behavior, credential handling, approval safeguards, asset provenance and verification status.
 
 To capture a region, keep the popup open and press your macOS region-capture or Screenshot-options shortcut (defaults: **⌘⇧4** / **⌘⇧5**). LinkPeek holds the card while the system screenshot overlay is open, then waits one second after that overlay closes before dismissing it. Escape dismisses immediately; 20 seconds is a fallback limit. The screenshot is taken by macOS. Debug diagnostics remain available through the `--debug` launch argument.
