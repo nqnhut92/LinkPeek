@@ -1,5 +1,5 @@
 #!/bin/sh
-# Archive unsigned, then sign locally, following FreeTheNotch's release workflow.
+# Archive unsigned, then sign locally with the LinkPeek release identity.
 # Keep the same certificate and private key for subsequent releases.
 # LINKPEEK_SIGNING_IDENTITY overrides "LinkPeek Release"; "-" is for local tests.
 set -eu

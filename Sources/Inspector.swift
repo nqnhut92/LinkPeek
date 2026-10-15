@@ -58,9 +58,7 @@ final class Inspector: Sendable {
       let value = Self.attribute(node, kAXValueAttribute)
       let urlText = (urlValue as? URL)?.absoluteString ?? (urlValue as? String)
       // Only accept a complete URL value, never scrape message bodies.
-      let candidate =
-        urlText.flatMap(HoverLink.init)
-        ?? (value as? String).flatMap { HoverLink.accessibilityValue($0, role: role) }
+      let candidate = Self.linkCandidate(urlText: urlText, value: value as? String, role: role)
       if debug {
         result.diagnostics.append(
           "depth=\(depth) role=\(role) subrole=\(subrole) value=\(Self.redacted(value)) URL=\(Self.redacted(urlValue)) frame=\(String(describing: frame))"
@@ -96,6 +94,14 @@ final class Inspector: Sendable {
       )
     }
     return result
+  }
+
+  /// AXImage's URL is its image source, not a navigation target. Keep traversing
+  /// so an enclosing AXLink can still supply a linked image's destination.
+  static func linkCandidate(urlText: String?, value: String?, role: String) -> HoverLink? {
+    guard role != kAXImageRole as String else { return nil }
+    return urlText.flatMap(HoverLink.init)
+      ?? value.flatMap { HoverLink.accessibilityValue($0, role: role) }
   }
 
   private static func attribute(_ node: AXUIElement, _ name: String) -> CFTypeRef? {

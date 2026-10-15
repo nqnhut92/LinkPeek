@@ -13,7 +13,7 @@ Requires macOS 13+. Building from source requires Xcode with Swift 6. Native Liq
 
 To update, quit LinkPeek and replace the app in Applications. Release builds use a stable signing identity to help preserve granted permissions across updates. A development or ad-hoc build has a different signing identity and may require granting permissions again. About displays the running version and build.
 
-Each release ZIP has a matching `.sha256` file. To check a download, put both files in the same folder and run `shasum -a 256 -c LinkPeek-0.1.0.zip.sha256` there (substitute the release version).
+Each release ZIP has a matching `.sha256` file. To check a download, put both files in the same folder and run `shasum -a 256 -c LinkPeek-0.1.1.zip.sha256` there (substitute the release version).
 
 ## Run
 
@@ -35,9 +35,13 @@ python3 -m unittest discover -s scripts/tests -p 'test_*.py'
 
 Build outputs, local caches and signing-certificate exports are ignored and should not be committed. CLI checks do not replace runtime checks for hover, focus, clipboard and permissions.
 
+## 0.1.1 hotfix
+
+Ignore Accessibility image-source URLs when hovering emoji and reactions, including Teams desktop and PWA. Enclosing hyperlinks and direct links to image files remain supported.
+
 ## Build a GitHub release
 
-No paid Apple Developer account is required for this self-signed workflow. It follows FreeTheNotch's local release process; it does not notarize the app or publish to GitHub.
+No paid Apple Developer account is required for this self-signed workflow. The release script archives and signs locally; it does not notarize the app or publish to GitHub.
 
 Create a **Self Signed Root / Code Signing** certificate named **LinkPeek Release** in Keychain Access, or import your existing certificate together with its private key into your login keychain. An exported `.p12` in the repository folder is only a backup; the script uses the installed Keychain identity. Keep that certificate and private key for later releases and store a protected backup. Signing may prompt for Keychain access.
 
@@ -49,12 +53,12 @@ For a differently named certificate, use `LINKPEEK_SIGNING_IDENTITY='Your certif
 
 The script archives Release unsigned, signs the app and embedded libraries, verifies the signature, rejects home-directory paths and email addresses in signing-authority metadata, then creates:
 
-- `build/release/LinkPeek-0.1.0.zip`
-- `build/release/LinkPeek-0.1.0.zip.sha256`
+- `build/release/LinkPeek-0.1.1.zip`
+- `build/release/LinkPeek-0.1.1.zip.sha256`
 
 Names use the built marketing version. Archives remain under `build/release/archive.*`; the script preserves earlier archives. Keep all signing material private: `.p12`, `.pfx`, `.cer`, `.crt`, `.pem` and `.key` files are ignored.
 
-Before publishing, test the packaged app from Applications, including Settings focus, Copy Link/QR, Accessibility and launch at login. Review and commit the matching source, then push it. In [New release](https://github.com/nqnhut92/LinkPeek/releases/new), create a matching version tag (for example `v0.1.0`) at that commit, attach the ZIP and SHA-256 file, and include the installation instructions above. Save a draft for review before publishing. Bump the marketing version for subsequent releases rather than replacing an existing version's assets.
+Before publishing, test the packaged app from Applications, including Settings focus, Copy Link/QR, Accessibility and launch at login. Review and commit the matching source, then push it. In [New release](https://github.com/nqnhut92/LinkPeek/releases/new), create a matching version tag (for example `v0.1.1`) at that commit, attach the ZIP and SHA-256 file, and include the installation instructions above. Save a draft for review before publishing. Bump the marketing version for subsequent releases rather than replacing an existing version's assets.
 
 See [technical design](docs/TECHNICAL_DESIGN.md) for architecture, UI behavior, credential handling, approval safeguards, asset provenance and verification status.
 
@@ -68,7 +72,7 @@ Enable **Settings → General → Launch at login** to start LinkPeek when signi
 
 ## App identity and version
 
-The project, scheme, executable, Swift module and application are named **LinkPeek** (`LinkPeek.xcodeproj`, `LinkPeek.app`). The bundle identifier is `com.linkpeek.app`. Like FreeTheNotch, the marketing version is separate from the timestamp build number; About shows `Version 0.1.0 (build-YYYYMMDD.HHMMSS)`, read from the built bundle.
+The project, scheme, executable, Swift module and application are named **LinkPeek** (`LinkPeek.xcodeproj`, `LinkPeek.app`). The bundle identifier is `com.linkpeek.app`. The marketing version is separate from the timestamp build number; About shows `Version 0.1.1 (build-YYYYMMDD.HHMMSS)`, read from the built bundle.
 
 When upgrading from PR Hover, known preferences are copied once where LinkPeek has no saved value. The original Keychain service is retained to preserve PATs. Grant Accessibility to the renamed app and enable Launch at login for LinkPeek if needed. Quit old copies before running the renamed app.
 

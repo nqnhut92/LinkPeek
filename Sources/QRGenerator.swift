@@ -2,7 +2,7 @@ import AppKit
 import CoreImage
 import CoreImage.CIFilterBuiltins
 
-/// Offline Core Image generator ported from FreeTheNotch, with an integer
+/// Offline Core Image generator with an integer
 /// module scale and four-module white quiet zone for reliable scanning.
 enum QRGenerator {
   static func makeQRCode(from string: String, size: CGFloat) -> NSImage? {
