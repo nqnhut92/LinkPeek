@@ -1,0 +1,325 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D4927EE47D024267A9240F15 /* PATSecureField.swift in Sources */ = {isa = PBXBuildFile; fileRef = E845E92F37004AEBA17287F2 /* PATSecureField.swift */; };
+		E012BDB501304422BE809480 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = D1BBE48DB63C4215A74366EC /* LICENSE */; };
+		A33333333333333333333333 /* AppInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A44444444444444444444444 /* AppInfo.swift */; };
+		A11111111111111111111111 /* QRGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22222222222222222222222 /* QRGenerator.swift */; };
+		1A430ED12F31F930AC443BCC /* HoverCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3854A15AF6B60201C56DBADD /* HoverCardView.swift */; };
+		249DA80E9FDA5D141ECD922D /* HoverService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E418BBA13B7B13A9869C2709 /* HoverService.swift */; };
+		25D0E0DD52E1E5A1E8A96F8F /* PanelPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8025F89CD194B7A14E950EE /* PanelPlacement.swift */; };
+		3140B1E3EB6AC4C80C449502 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC453D5CC3001124C23A95CD /* Settings.swift */; };
+		50A585FC2BF8D7BD1F53F0E7 /* Credentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8628BF7ECC87F739F4AC023D /* Credentials.swift */; };
+		68BA130D852617903FA7475C /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C258CE14BA6FC46C35C581E /* App.swift */; };
+		8F821A6F41E429D658B120D5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E74ED942FE75C32A40362F9A /* Assets.xcassets */; };
+		AD427210E2F52C61D3325FB7 /* AzureDevOpsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 713F65B4B6813F21C7B22F54 /* AzureDevOpsClient.swift */; };
+		C6BA4B36E1D6DAEA84B3AE3E /* Inspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECCBF121976E6B840C1C17F4 /* Inspector.swift */; };
+		D131F24A4A0AC8B9AB4E75F6 /* AppIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 73CECD33A4233613070E3770 /* AppIcon.png */; };
+		ED0B68D6DC36D911A4DCBA3D /* PRLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BD187D755B76714615FA2D0 /* PRLink.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		E845E92F37004AEBA17287F2 /* PATSecureField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PATSecureField.swift; sourceTree = "<group>"; };
+		D1BBE48DB63C4215A74366EC /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		A44444444444444444444444 /* AppInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInfo.swift; sourceTree = "<group>"; };
+		A22222222222222222222222 /* QRGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRGenerator.swift; sourceTree = "<group>"; };
+		0BD187D755B76714615FA2D0 /* PRLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRLink.swift; sourceTree = "<group>"; };
+		3854A15AF6B60201C56DBADD /* HoverCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoverCardView.swift; sourceTree = "<group>"; };
+		424F511C60D7894AFB3D638C /* TECHNICAL_DESIGN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = TECHNICAL_DESIGN.md; sourceTree = "<group>"; };
+		490819FABA449942574CC712 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5905C37C964FFF3A5CBBA995 /* PRLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRLinkTests.swift; sourceTree = "<group>"; };
+		5C258CE14BA6FC46C35C581E /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		713F65B4B6813F21C7B22F54 /* AzureDevOpsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureDevOpsClient.swift; sourceTree = "<group>"; };
+		73CECD33A4233613070E3770 /* AppIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = AppIcon.png; sourceTree = "<group>"; };
+		74B305233436E158527BC649 /* LinkPeek.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = "LinkPeek.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8628BF7ECC87F739F4AC023D /* Credentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Credentials.swift; sourceTree = "<group>"; };
+		92CD1541C5AC6C093DE84D0D /* PanelPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPlacementTests.swift; sourceTree = "<group>"; };
+		A97AC7D58F228BC9826111A5 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		B8025F89CD194B7A14E950EE /* PanelPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPlacement.swift; sourceTree = "<group>"; };
+		D121872B35B8AC6B7AEC900C /* Package.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Package.swift; sourceTree = "<group>"; };
+		E418BBA13B7B13A9869C2709 /* HoverService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoverService.swift; sourceTree = "<group>"; };
+		E74ED942FE75C32A40362F9A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		ECCBF121976E6B840C1C17F4 /* Inspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Inspector.swift; sourceTree = "<group>"; };
+		F8F87F7DEB9CBBD2FBF19751 /* Phase2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase2Tests.swift; sourceTree = "<group>"; };
+		FC453D5CC3001124C23A95CD /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		CC099F27D632CDA092A00400 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5A37C970431FC2ECD74A2FB4 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				73CECD33A4233613070E3770 /* AppIcon.png */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		5F57DA691927C427F9C13703 /* docs */ = {
+			isa = PBXGroup;
+			children = (
+				424F511C60D7894AFB3D638C /* TECHNICAL_DESIGN.md */,
+			);
+			path = docs;
+			sourceTree = "<group>";
+		};
+		9288A09367B2AA713DDBD3D6 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				74B305233436E158527BC649 /* LinkPeek.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A0A8A5B2ABF4F5D86A699A4F = {
+			isa = PBXGroup;
+			children = (
+				FCFE1509D101EAEFA382E644 /* Sources */,
+				D508F6EA9B48A36E00F3023E /* Tests */,
+				E74ED942FE75C32A40362F9A /* Assets.xcassets */,
+				5A37C970431FC2ECD74A2FB4 /* Resources */,
+				490819FABA449942574CC712 /* Info.plist */,
+				A97AC7D58F228BC9826111A5 /* README.md */,
+				D1BBE48DB63C4215A74366EC /* LICENSE */,
+				5F57DA691927C427F9C13703 /* docs */,
+				D121872B35B8AC6B7AEC900C /* Package.swift */,
+				9288A09367B2AA713DDBD3D6 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D508F6EA9B48A36E00F3023E /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				5905C37C964FFF3A5CBBA995 /* PRLinkTests.swift */,
+				92CD1541C5AC6C093DE84D0D /* PanelPlacementTests.swift */,
+				F8F87F7DEB9CBBD2FBF19751 /* Phase2Tests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		FCFE1509D101EAEFA382E644 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				A22222222222222222222222 /* QRGenerator.swift */,
+				A44444444444444444444444 /* AppInfo.swift */,
+				5C258CE14BA6FC46C35C581E /* App.swift */,
+				ECCBF121976E6B840C1C17F4 /* Inspector.swift */,
+				0BD187D755B76714615FA2D0 /* PRLink.swift */,
+				B8025F89CD194B7A14E950EE /* PanelPlacement.swift */,
+				8628BF7ECC87F739F4AC023D /* Credentials.swift */,
+				713F65B4B6813F21C7B22F54 /* AzureDevOpsClient.swift */,
+				E418BBA13B7B13A9869C2709 /* HoverService.swift */,
+				FC453D5CC3001124C23A95CD /* Settings.swift */,
+				E845E92F37004AEBA17287F2 /* PATSecureField.swift */,
+				3854A15AF6B60201C56DBADD /* HoverCardView.swift */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		CA9A5EE4B6A3C977E43016A5 /* LinkPeek */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 21F388E21EC59FA363A2415E /* Build configuration list for PBXNativeTarget "LinkPeek" */;
+			buildPhases = (
+				67BFCDEC6156E8AB3B73B455 /* Sources */,
+				CC099F27D632CDA092A00400 /* Frameworks */,
+				AF1456B547D6605732E1B825 /* Resources */,
+				A55555555555555555555555 /* Stamp build version */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LinkPeek;
+			productName = "LinkPeek";
+			productReference = 74B305233436E158527BC649 /* LinkPeek.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		50B1F692467B158C1ED08E50 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 2700;
+			};
+			buildConfigurationList = 21495C3EBFDB4BDE7E222ADA /* Build configuration list for PBXProject "LinkPeek" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A0A8A5B2ABF4F5D86A699A4F;
+			productRefGroup = 9288A09367B2AA713DDBD3D6 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				CA9A5EE4B6A3C977E43016A5 /* LinkPeek */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AF1456B547D6605732E1B825 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8F821A6F41E429D658B120D5 /* Assets.xcassets in Resources */,
+				D131F24A4A0AC8B9AB4E75F6 /* AppIcon.png in Resources */,
+				E012BDB501304422BE809480 /* LICENSE in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+        A55555555555555555555555 /* Stamp build version */ = {
+            isa = PBXShellScriptBuildPhase;
+            alwaysOutOfDate = 1;
+            buildActionMask = 2147483647;
+            files = ();
+            inputPaths = ("$(BUILT_PRODUCTS_DIR)/$(INFOPLIST_PATH)");
+            outputPaths = ();
+            name = "Stamp build version";
+            runOnlyForDeploymentPostprocessing = 0;
+            shellPath = /bin/sh;
+            shellScript = "set -eu\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $(date +%Y%m%d.%H%M%S)\" \"$BUILT_PRODUCTS_DIR/$INFOPLIST_PATH\"\n";
+        };
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		67BFCDEC6156E8AB3B73B455 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				68BA130D852617903FA7475C /* App.swift in Sources */,
+				A11111111111111111111111 /* QRGenerator.swift in Sources */,
+				A33333333333333333333333 /* AppInfo.swift in Sources */,
+				C6BA4B36E1D6DAEA84B3AE3E /* Inspector.swift in Sources */,
+				ED0B68D6DC36D911A4DCBA3D /* PRLink.swift in Sources */,
+				25D0E0DD52E1E5A1E8A96F8F /* PanelPlacement.swift in Sources */,
+				50A585FC2BF8D7BD1F53F0E7 /* Credentials.swift in Sources */,
+				AD427210E2F52C61D3325FB7 /* AzureDevOpsClient.swift in Sources */,
+				249DA80E9FDA5D141ECD922D /* HoverService.swift in Sources */,
+				3140B1E3EB6AC4C80C449502 /* Settings.swift in Sources */,
+				D4927EE47D024267A9240F15 /* PATSecureField.swift in Sources */,
+				1A430ED12F31F930AC443BCC /* HoverCardView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		5DC501BE45992982A85CADCF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		707EDDAFFC01798C8A9D536E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = B53256DTDC;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_LSUIElement = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.linkpeek.app;
+				PRODUCT_MODULE_NAME = LinkPeek;
+				MARKETING_VERSION = 0.1.0;
+				CURRENT_PROJECT_VERSION = 1;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		83A6BDD64766BB7D4C5EDC5B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		C4CA22916CC3D4B87558DCA7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = B53256DTDC;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_LSUIElement = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.linkpeek.app;
+				PRODUCT_MODULE_NAME = LinkPeek;
+				MARKETING_VERSION = 0.1.0;
+				CURRENT_PROJECT_VERSION = 1;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		21495C3EBFDB4BDE7E222ADA /* Build configuration list for PBXProject "LinkPeek" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5DC501BE45992982A85CADCF /* Debug */,
+				83A6BDD64766BB7D4C5EDC5B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		21F388E21EC59FA363A2415E /* Build configuration list for PBXNativeTarget "LinkPeek" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C4CA22916CC3D4B87558DCA7 /* Debug */,
+				707EDDAFFC01798C8A9D536E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 50B1F692467B158C1ED08E50 /* Project object */;
+}

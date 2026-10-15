@@ -1,0 +1,17 @@
+.build/
+.swiftpm/
+build/
+build-*/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.DS_Store
+
+# Local signing material (including exported private keys).
+*.p12
+*.pfx
+*.cer
+*.crt
+*.pem
+*.key
+__pycache__/
