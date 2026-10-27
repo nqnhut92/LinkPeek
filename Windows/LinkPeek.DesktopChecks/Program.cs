@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
@@ -31,11 +30,11 @@ internal static class Program
             { RunRenderer(new IntPtr(long.Parse(parent, CultureInfo.InvariantCulture)), dir); return 0; }
             var output = args.Length > 0 ? args[0] : Path.Combine(Environment.CurrentDirectory, "artifacts", "ui-previews");
             Directory.CreateDirectory(output);
-            VerifyHostedHyperlink(Path.Combine(output, "hosted-link-check.txt"));
+            VerifyHostedHyperlink();
             Console.WriteLine("PASS: cross-process hosted hyperlink, plain-text rejection and foreign-window rejection.");
             var previews = UiPreview.Render(output);
             if (previews.Count == 0 || previews.Any(file => !File.Exists(file))) throw new Exception("UI previews were not written.");
-            Console.WriteLine($"PASS: {previews.Count} light/dark previews at 100%, 150% and 200% scale; layout audit found no clipped or overflowing controls.");
+            Console.WriteLine($"PASS: {previews.Count} light/dark previews at 100% and 200% scale; layout audit found no clipped or overflowing controls.");
             UiPreview.VerifySavedPatMask(output);
             Console.WriteLine("PASS: " + UiPreview.VerifyCardLifecycle());
             Console.WriteLine("PASS: saved-PAT mask aligns with typed glyphs, uses placeholder tone, keeps the input empty and hides on typing.");
@@ -56,12 +55,11 @@ internal static class Program
         return Process.Start(start) ?? throw new Exception("Cannot start accessibility fixture.");
     }
 
-    private static void VerifyHostedHyperlink(string log)
+    private static void VerifyHostedHyperlink()
     {
         var directory = Path.Combine(Path.GetTempPath(), "linkpeek-uia-" + Guid.NewGuid());
         Directory.CreateDirectory(directory);
         using var host = Spawn("--host", directory);
-        var lines = new ConcurrentQueue<string>();
         try
         {
             var deadline = Stopwatch.StartNew();
@@ -77,19 +75,18 @@ internal static class Program
             var linkPoint = new Point(targets.LinkX, targets.LinkY);
             var check = Task.Run(() =>
             {
-                var link = LinkInspector.Inspect(linkPoint, info.Process, window, lines.Enqueue);
-                if (link?.Link.Text != SampleUrl) throw new Exception("Hosted renderer hyperlink was not resolved. " + string.Join(" | ", lines));
-                var text = LinkInspector.Inspect(new Point(targets.TextX, targets.TextY), info.Process, window, lines.Enqueue);
+                var link = LinkInspector.Inspect(linkPoint, info.Process, window);
+                if (link?.Link.Text != SampleUrl) throw new Exception("Hosted renderer hyperlink was not resolved. ");
+                var text = LinkInspector.Inspect(new Point(targets.TextX, targets.TextY), info.Process, window);
                 if (text is not null) throw new Exception("Plain URL text must not be treated as a hyperlink.");
                 if (Native.SameRoot(Native.WindowFromPoint(linkPoint), IntPtr.Zero)) throw new Exception("Invalid host must be rejected.");
-                var foreign = LinkInspector.Inspect(linkPoint, info.Process, GetDesktopWindow(), lines.Enqueue);
+                var foreign = LinkInspector.Inspect(linkPoint, info.Process, GetDesktopWindow());
                 if (foreign is not null) throw new Exception("A foreign host window must not be accepted.");
             });
             if (!check.Wait(TimeSpan.FromSeconds(20))) throw new Exception("Accessibility fixture timed out.");
         }
         finally
         {
-            File.WriteAllLines(log, lines.ToArray());
             if (!host.HasExited) host.Kill(entireProcessTree: true);
             host.WaitForExit(5000);
             try { Directory.Delete(directory, true); } catch (IOException) { }

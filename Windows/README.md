@@ -2,7 +2,7 @@
 
 Native Windows port of LinkPeek: a tray utility that previews web links as offline QR codes or Azure DevOps pull requests. The existing Swift/macOS application remains in the repository root; Windows code lives here.
 
-Targets Windows 10 22H2 / Windows 11, x64 or ARM64. Development requires the .NET 10 SDK. The published portable app includes its runtime and runs as the current user, without administrator privileges or a separate .NET installation. Users have confirmed that hover detection works across their apps, including Teams desktop. Windows 0.1.1 is still being finalized: the current iteration rebuilds the interface on Fluent controls, and **the new UI still needs user validation on a real desktop**. See the acceptance checklist below and [Windows changes](CHANGELOG.md).
+Targets Windows 10 22H2 / Windows 11, x64 or ARM64. Development requires the .NET 10 SDK. The published portable app includes its runtime and runs as the current user, without administrator privileges or a separate .NET installation. Hover detection has been confirmed to work across the apps its author uses, including Teams desktop; see [Detection across applications](#detection-across-applications) for what depends on each app. See the [acceptance checklist](#windows-acceptance-checklist) and [Windows changes](CHANGELOG.md).
 
 ## Interface
 
@@ -10,7 +10,7 @@ The Windows UI is built with WPF and [WPF UI](https://github.com/lepoco/wpfui) 4
 
 - **Settings** is a Mica window with a Fluent title bar and a left `NavigationView` (General, Azure DevOps, About). Each option is a settings card (`CardControl`) with an icon, title, description and a Fluent `ToggleSwitch`, `Slider`, `TextBox` or `PasswordBox`. Changes apply immediately, like Windows Settings; there is no separate Save button. The organization is saved when you leave its field. Status and errors appear in an `InfoBar` at the top of the page.
 - **Hover card** is a borderless Fluent flyout-style window (rounded corners and DWM shadow on Windows 11) with Fluent System Icons, a vector QR code that stays sharp at any scale, an `InfoBar` for warnings and errors, and accent/standard Fluent buttons. Hover cards never take focus.
-- **Tray menu**, **Open link…**, **Link diagnostics**, approval confirmation and PAT removal use Fluent context menus and ContentDialog-style windows. Approve and Remove default to the safe **Cancel** button.
+- **Tray menu**, **Open link…**, approval confirmation and PAT removal use Fluent context menus and ContentDialog-style windows. Approve and Remove default to the safe **Cancel** button.
 - Typography is Segoe UI Variable / Segoe UI through the WPF UI type ramp. Colors come from the Windows light, dark and high-contrast theme resources and the system accent color; open windows follow a Windows theme change.
 - The process is per-monitor DPI aware (V2). WPF lays out in device-independent pixels and re-rasterizes on each display, so the same layout is used at 100%, 150% and 200%.
 
@@ -20,11 +20,11 @@ Windows 10 has no Mica; the same layout uses a solid theme background there.
 
 When a PAT exists in Windows Credential Manager for the organization being edited and the PAT input is empty, the field shows **eight dots in the placeholder color**, matching the macOS `PATSecureField`. LinkPeek only checks that the credential exists; it never reads the token to draw this, the dot count is always eight and does not reveal the token's length, and the dots are drawn over the field rather than placed in the input. The `PasswordBox` stays empty and the drawing has no UI Automation element. Typing a new PAT hides the dots immediately; **Save PAT** replaces the stored token. The credential card next to the field also says "PAT saved", and screen readers get the same information through the field's help text.
 
-### UI previews
+### UI checks
 
-The **desktop-checks** CI job renders synthetic previews: Settings (each page, the saved-PAT state and the minimum window size), the QR card, pull-request cards (normal, confirmation off, not configured), Open link with a validation error, Link diagnostics, the approval dialog and the tray menu. Each is rendered in light and dark themes at 100%, 150% and 200% scale. Download **LinkPeek-UI-previews** from a successful Actions run; files are in `light/` and `dark/`, named `<view>@<scale>.png`. Previews use a solid background in place of Mica and approximate the Windows 11 frame; they are not screenshots of the user's desktop and never read saved credentials.
+The **desktop-checks** CI job runs on a Windows runner and fails if any of these regress: a hyperlink exposed by a separate renderer process still resolves (while plain URL text and foreign windows are rejected); no text in Settings, the hover cards, dialogs or tray menu is clipped, squeezed or outside its window, in light and dark themes and at the minimum Settings size; the saved-PAT mask lines up with eight typed glyphs, uses a lighter placeholder tone, leaves the input empty, has no automation peer and disappears when typing starts; and opening and closing 200 hover cards leaks no windows, GDI/USER handles or theme reloads.
 
-The same job fails if any text in these views is clipped or any control lies outside its window, and it checks the saved-PAT state: the mask must line up with eight typed glyphs, use a lighter placeholder tone, leave the input empty, have no automation peer and disappear when typing starts (`pat-mask-check.txt`, plus `pat-saved-mask@200.png` and `pat-typed-reference@200.png` in each theme folder).
+The job also uploads **LinkPeek-UI-previews** (kept 14 days): synthetic light/dark PNGs at 100% and 200% scale, for reviewing the interface without a Windows machine. They use a solid background instead of Mica and are not screenshots of a desktop; they never read saved credentials.
 
 ## Build or package
 
@@ -37,7 +37,7 @@ dotnet run --project LinkPeek.Windows/LinkPeek.Windows.csproj
 ./publish.ps1 -Runtime win-arm64       # ARM64 portable ZIP + SHA-256
 ```
 
-The [Windows GitHub Actions workflow](https://github.com/nqnhut92/LinkPeek/actions/workflows/windows.yml) builds and tests both packages, checks a synthetic cross-process hosted hyperlink, renders UI previews, and uploads workflow artifacts. Pushes and pull requests only produce artifacts. A manual run can also attach the Windows assets to a specified **existing** GitHub release, after both builds and desktop checks pass; see [Releasing](../docs/RELEASING.md). Nothing is released automatically on push, and the workflow does not sign the app. Packages are unsigned; company application-control policies or SmartScreen may require IT approval. Do not disable those controls. Keep the entire extracted folder, then run `LinkPeek.exe`; distributing the EXE alone omits its runtime dependencies.
+The [Windows GitHub Actions workflow](https://github.com/nqnhut92/LinkPeek/actions/workflows/windows.yml) builds and tests both packages, runs the desktop checks above, and uploads workflow artifacts. Pushes and pull requests only produce artifacts. A manual run can also attach the Windows assets to a specified **existing** GitHub release, after both builds and desktop checks pass; see [Releasing](../docs/RELEASING.md). Nothing is released automatically on push, and the workflow does not sign the app. Packages are unsigned; company application-control policies or SmartScreen may require IT approval. Do not disable those controls. Keep the entire extracted folder, then run `LinkPeek.exe`; distributing the EXE alone omits its runtime dependencies.
 
 Outputs are `artifacts/LinkPeek-Windows-<version>-win-x64.zip` (or `win-arm64`) and the matching `.zip.sha256`. The version comes from `LinkPeek.Windows.csproj`. Each ZIP includes `BUILD-INFO.txt` with the Windows version, architecture and exact source commit, plus usage and license files. Builds from a source archive without Git metadata report an unknown commit. Packaging uses a fresh staging directory to keep old dependencies out of a new archive.
 
@@ -84,34 +84,23 @@ PR previews show title, author, branches, lifecycle and your vote. Confirmation 
 
 Detection uses Windows UI Automation and MSAA, with no application-name allowlist. It verifies that the pointer's native window belongs to the foreground top-level window, then examines a bounded neighborhood for hyperlink controls whose rectangles contain the pointer. A hosted WebView/Chromium renderer can have a different PID from the foreground app: this is allowed only within that same native root window. Inspection prioritizes up to eight ancestors of the hit text node; MSAA also checks hyperlink ancestors instead of only the exact text child. Full URL values or full URL hyperlink names are accepted; prose, friendly labels and image-source URLs are not scraped. The known scheme-less `dev.azure.com/` form is normalized only for accessibility hyperlinks. No links are invoked as part of inspection.
 
-Teams, Outlook, browsers, PDF readers and other applications vary by version and accessibility provider. A displayed friendly name does not establish that its target is available to UI Automation. Test the particular apps used at your company; no cross-app compatibility is claimed yet. Elevated apps, protected surfaces and company policies may block access. LinkPeek does not request elevation or bypass those controls; use **Open link…** if needed.
+Teams, Outlook, browsers, PDF readers and other applications vary by version and accessibility provider. A displayed friendly name does not establish that its target is available to UI Automation. Test the particular apps used at your company; compatibility with every version of every app is not claimed. Elevated apps, protected surfaces and company policies may block access. LinkPeek does not request elevation or bypass those controls; use **Open link…** if needed.
 
 Inspection runs on one MTA worker away from the UI thread with a soft 350 ms UIA traversal budget, at most 24 visited UIA nodes, eight ancestor levels and three descendant levels. A misbehaving provider can still block a native call past that budget; no additional worker is spawned while it is pending, so the tray and manual entry stay responsive but automatic hover can stall until the provider returns. Detection does not capture screen pixels or record application text. API requests use HTTPS to `dev.azure.com`, disable redirects/cookies and return sanitized errors.
 
-### Diagnose desktop Teams or another unsupported app
+### Running the desktop checks locally
 
-1. Right-click the tray icon and choose **Diagnose hovered link…**.
-2. Read the notice, select **Start**, then move onto the problem link within three seconds. Keep the source app foreground and the pointer still.
-3. A report opens with roles, PID relationships, node sizes, whether candidate fields contain complete URLs, and the resolution path or timeout. It does **not** contain URL values, friendly link labels, chat content, PATs or account details. Nothing is uploaded or saved automatically.
-4. Use **Copy report** if you choose to share that diagnostic text. If a provider is stalled, restart LinkPeek before another attempt. The diagnostic path shares the single-worker limit.
-
-New Teams desktop uses a hosted renderer and can expose a different accessibility tree from Teams web. The current 0.1.1 changes address a confirmed limitation in LinkPeek's old same-PID filter and expand hyperlink ancestry inspection; they are not proof of compatibility with every Teams build. A complete URL visibly shown in a chat still has to be exposed as a hyperlink target by that build.
-
-### Native regression and preview checks
-
-From `Windows/` on a Windows development machine:
+From `Windows/` on a Windows development machine with a desktop session:
 
 ```powershell
 dotnet run --project LinkPeek.DesktopChecks/LinkPeek.DesktopChecks.csproj -c Release -- artifacts/ui-previews
 ```
 
-The harness starts a synthetic host window and a distinct child-renderer process, then checks that a hyperlink resolves through the host while plain URL text and a foreign root window are rejected. It also renders the light/dark UI previews at three scales, runs the layout audit and checks the saved-PAT state. The synthetic fixture is not Teams and does not establish real Teams behavior. The harness requires a Windows desktop session, and its checks cannot run in Linux.
-
-For only the synthetic appearance previews, the Windows app also accepts `LinkPeek.exe --render-ui <output-folder>`; this mode does not start the tray workflow, mutate preferences/startup settings, access PATs or call Azure DevOps.
+The harness starts a synthetic host window and a distinct child-renderer process. It is a regression test for the detection logic, not a statement about any particular app, and it cannot run on Linux.
 
 ## Windows acceptance checklist
 
-Core tests and cross-compilation do not validate actual desktop behavior. Before distributing, run on a Windows machine:
+Core tests, cross-compilation and the synthetic desktop checks do not validate real applications. Before a release, run through this list on a Windows machine:
 
 - Launch a portable package without admin/.NET installed; verify one tray instance, Pause, Quit, and first-run Settings.
 - In each target app (including Teams, Edge/Chrome, Outlook and other daily tools), test raw URLs and friendly links. Record app/version and whether the target is exposed. Unsupported links must produce no guessed QR or PR. Confirm manual entry works.
@@ -121,7 +110,7 @@ Core tests and cross-compilation do not validate actual desktop behavior. Before
 - On a disposable PR only, explicitly test confirmation/cancel, changed commit, inactive/draft/already-approved states, one vote per click, and server readback. Do not use a real work PR for smoke tests.
 - Test launch at sign-in, move the folder and re-register, and confirm a policy-denied registration gives a visible error.
 
-Windows 11 appearance, accessibility-provider compatibility, native clipboard/credential integration, screenshot behavior and sign-in registration remain manual validation requirements. This port does not migrate macOS Keychain contents or preferences, imitate macOS visual effects, or provide an installer/code-signing identity.
+Accessibility-provider compatibility, native clipboard/credential integration, screenshot behavior and sign-in registration depend on the machine and apps, so they stay manual checks. This port does not migrate macOS Keychain contents or preferences, imitate macOS visual effects, or provide an installer/code-signing identity.
 
 ## Troubleshooting and removal
 

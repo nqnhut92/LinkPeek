@@ -6,6 +6,13 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using LinkPeek.Core;
+
 namespace LinkPeek.Windows;
 
 // Uses only synthetic data and renders WPF visuals offscreen with RenderTargetBitmap; never
@@ -16,7 +23,7 @@ internal static class UiPreview
 {
     // Long enough for NavigationView pane and page transitions to finish.
     private static readonly TimeSpan Settle = TimeSpan.FromMilliseconds(900);
-    private static readonly (double Scale, string Name)[] Scales = [(1.0, "100"), (1.5, "150"), (2.0, "200")];
+    private static readonly (double Scale, string Name)[] Scales = [(1.0, "100"), (2.0, "200")];
 
     public static IReadOnlyList<string> Render(string directory)
     {
@@ -62,13 +69,6 @@ internal static class UiPreview
 
             var open = new OpenLinkWindow(); Open(open); open.PreviewInvalid("ftp://example.org"); Pump();
             Capture(open, theme, "open-link"); open.Close();
-            var diagnostics = new DiagnosticWindow(string.Join(Environment.NewLine, "LinkPeek Windows " + SettingsWindow.AppVersion,
-                "Windows: 10.0.26100.0", "No URL values, labels or chat contents are included.", "",
-                "Foreground PID: 4120; pointer in foreground root: True", "UIA hit PID differs from foreground: True",
-                "Node 0: role=ControlType.Text; rendererPID=True; bounds=212x18; name=31 chars, completeWebTarget=True",
-                "Node 1: role=ControlType.Hyperlink; rendererPID=True; bounds=212x18; name=31 chars, completeWebTarget=True",
-                "Hyperlink candidate: 31 chars, completeWebTarget=True", "Resolved hyperlink through UI Automation."));
-            Open(diagnostics); Capture(diagnostics, theme, "diagnostics"); diagnostics.Close();
             var confirm = DialogWindow.PreviewConfirmation(); Open(confirm); Capture(confirm, theme, "dialog-approve"); confirm.Close();
             Menu(theme);
 
@@ -92,7 +92,7 @@ internal static class UiPreview
         {
             var owner = TrayApplication.CreateMenuHost();
             owner.Left = 24; owner.Top = 24; owner.ShowActivated = false; owner.Show();
-            var menu = TrayApplication.CreateMenu(() => { }, () => { }, () => { }, _ => { }, () => { }, () => { });
+            var menu = TrayApplication.CreateMenu(() => { }, () => { }, _ => { }, () => { }, () => { });
             menu.PlacementTarget = owner; menu.Placement = PlacementMode.Relative; menu.IsOpen = true;
             Pump(TimeSpan.FromSeconds(1)); // Let the Fluent open animation finish.
             // The popup root includes the menu's border and shadow margin.

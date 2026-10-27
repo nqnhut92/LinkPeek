@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Verify hosted links and render light/dark UI previews
+      - name: Run hosted-hyperlink, UI layout and saved-PAT regression checks
         shell: pwsh
         run: |
           dotnet run --project LinkPeek.DesktopChecks/LinkPeek.DesktopChecks.csproj --configuration Release -- artifacts/ui-previews
@@ -38,6 +38,7 @@ jobs:
           name: LinkPeek-UI-previews
           path: Windows/artifacts/ui-previews/
           if-no-files-found: warn
+          retention-days: 14
 
   build:
     runs-on: windows-latest

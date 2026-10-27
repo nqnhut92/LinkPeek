@@ -27,7 +27,6 @@ internal sealed class TrayApplication : IDisposable
     private uint anchorProcess;
     private string? suppressed;
     private bool paused;
-    private bool diagnosing;
     private TimeSpan outsideSince;
     private TimeSpan captureUntil;
     private bool snipKeyWasDown;
@@ -40,7 +39,7 @@ internal sealed class TrayApplication : IDisposable
         App.InstallCrashGuards(NotifyRecovered);
         using (var stream = System.Windows.Application.GetResourceStream(App.Asset("LinkPeek.ico")).Stream)
             icon = new Icon(stream, WinForms.SystemInformation.SmallIconSize);
-        menu = CreateMenu(OpenLink, () => OpenSettings(), async () => await DiagnoseHoverAsync(),
+        menu = CreateMenu(OpenLink, () => OpenSettings(),
             value => { paused = value; CloseCard(); gate.Reset(); }, () => OpenSettings(SettingsPage.About), Quit);
         // A WPF popup only dismisses on outside clicks when one of our windows is foreground,
         // so the tray menu opens from an invisible, off-screen owner window.
@@ -82,13 +81,12 @@ internal sealed class TrayApplication : IDisposable
         ResizeMode = System.Windows.ResizeMode.NoResize
     };
 
-    internal static System.Windows.Controls.ContextMenu CreateMenu(Action openLink, Action openSettings, Action diagnose,
+    internal static System.Windows.Controls.ContextMenu CreateMenu(Action openLink, Action openSettings,
         Action<bool> pauseChanged, Action about, Action quit)
     {
         var result = new System.Windows.Controls.ContextMenu { Placement = PlacementMode.MousePoint };
         result.Items.Add(Item("Open link…", SymbolRegular.Open24, openLink));
         result.Items.Add(Item("Settings", SymbolRegular.Settings24, openSettings));
-        result.Items.Add(Item("Diagnose hovered link…", SymbolRegular.Stethoscope24, diagnose));
         var pause = new MenuItem { Header = "Pause hover", IsCheckable = true };
         pause.Click += (_, _) => pauseChanged(pause.IsChecked);
         result.Items.Add(pause);
@@ -149,42 +147,6 @@ internal sealed class TrayApplication : IDisposable
             ShowCard(link, Rectangle.Empty, WinForms.Cursor.Position, true);
     }
 
-    private async Task DiagnoseHoverAsync()
-    {
-        if (diagnosing) return;
-        App.FollowSystemTheme();
-        if (!DialogWindow.Confirm(null, "Diagnose hovered link",
-                "After you select Start, place the pointer over the problem link and keep it still. LinkPeek inspects it after 3 seconds.\n\n" +
-                "The report contains only accessibility roles, process relationships and URL-presence flags. No chat text, URL values or credentials are recorded.",
-                "Start", "Cancel", primaryIsDefault: true)) return;
-        diagnosing = true; CloseCard(); gate.Reset();
-        var report = "";
-        try
-        {
-            await Task.Delay(3000);
-            if (inspection is { IsCompleted: false }) await Task.WhenAny(inspection, Task.Delay(2000));
-            if (inspection is { IsCompleted: false })
-                report = "An existing accessibility request has not returned. Restart LinkPeek and try Diagnose again.\nThe provider may be stalled; no additional worker was started.";
-            else
-            {
-                var lines = new List<string> { $"LinkPeek Windows {SettingsWindow.AppVersion}",
-                    $"Windows: {Environment.OSVersion.Version}", "No URL values, labels or chat contents are included.", "" };
-                var point = WinForms.Cursor.Position; var window = Native.GetForegroundWindow();
-                Native.GetWindowThreadProcessId(window, out var pid);
-                inspectedPoint = point; inspectedProcess = pid;
-                inspection = Task.Run(() => LinkInspector.Inspect(point, pid, window, lines.Add));
-                if (await Task.WhenAny(inspection, Task.Delay(2500)) != inspection)
-                    report = "The app's accessibility provider did not respond within 2.5 seconds.\nNo additional worker was started. Restart LinkPeek if automatic hover remains stalled.";
-                else { await inspection; report = string.Join(Environment.NewLine, lines); }
-            }
-        }
-        catch { report = "Accessibility inspection failed. No content was recorded."; }
-        finally { diagnosing = false; }
-        App.FollowSystemTheme();
-        var diagnostics = new DiagnosticWindow(report);
-        diagnostics.Show(); diagnostics.Activate();
-    }
-
     private void CloseCard()
     {
         var old = card; card = null; old?.Close();
@@ -209,7 +171,7 @@ internal sealed class TrayApplication : IDisposable
         var snip = (Native.KeyDown(0x5B) || Native.KeyDown(0x5C)) && Native.KeyDown(0x10) && Native.KeyDown(0x53);
         if (snip && !snipKeyWasDown && card is not null) captureUntil = clock.Elapsed + TimeSpan.FromSeconds(20);
         snipKeyWasDown = snip;
-        if (paused || diagnosing || menu.IsOpen || settings is { IsVisible: true }) return;
+        if (paused || menu.IsOpen || settings is { IsVisible: true }) return;
         var point = WinForms.Cursor.Position;
         var foreground = Native.ForegroundProcess();
         if (card is { IsClosed: false })

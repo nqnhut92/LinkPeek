@@ -9,7 +9,7 @@ Both native implementations live in this repository and have separate build pipe
 | macOS | macOS 13+; Xcode with Swift 6 to build | `Sources/`, `Tests/`, `LinkPeek.xcodeproj`; instructions below | `LinkPeek-<version>.zip` |
 | Windows | Windows 10 22H2 / Windows 11, x64 or ARM64; .NET 10 SDK to build | [`Windows/`](Windows/README.md) | `LinkPeek-Windows-<version>-win-x64.zip` or `-win-arm64.zip` |
 
-The Windows portable package includes its .NET runtime and needs no installer or administrator privileges. Windows 0.1.1 is still being finalized. Hover detection works across apps, including Teams desktop; the interface now uses Fluent Design controls (WPF UI) and awaits user validation. See the [Windows changelog](Windows/CHANGELOG.md). Windows uses QRCoder and WPF UI; the macOS app has no third-party dependencies. Native Liquid Glass is available on macOS 26+.
+The Windows portable package includes its .NET runtime and needs no installer or administrator privileges. Hover detection depends on each app's accessibility support and has been confirmed in apps including Teams desktop. The interface uses Fluent Design controls (WPF UI). See the [Windows changelog](Windows/CHANGELOG.md). Windows uses QRCoder and WPF UI; the macOS app has no third-party dependencies. Native Liquid Glass is available on macOS 26+.
 
 ## Install on Windows
 

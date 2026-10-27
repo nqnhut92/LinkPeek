@@ -29,7 +29,7 @@ internal static class LinkInspector
 {
     // Called from an MTA worker, never the UI thread. A single outstanding worker
     // bounds resource use even if a third-party UIA provider stops responding.
-    public static Inspection? Inspect(Point point, uint foreground, IntPtr foregroundWindow = default, Action<string>? trace = null)
+    public static Inspection? Inspect(Point point, uint foreground, IntPtr foregroundWindow = default)
     {
         try
         {
@@ -37,11 +37,9 @@ internal static class LinkInspector
             if (foregroundWindow == IntPtr.Zero) foregroundWindow = Native.GetForegroundWindow();
             Native.GetWindowThreadProcessId(foregroundWindow, out var windowProcess);
             var sameRoot = Native.SameRoot(Native.WindowFromPoint(point), foregroundWindow);
-            trace?.Invoke($"Foreground PID: {foreground}; pointer in foreground root: {sameRoot}");
             if (windowProcess != foreground || !sameRoot) return null;
             var hit = AutomationElement.FromPoint(new System.Windows.Point(point.X, point.Y));
             if (hit is null) return null;
-            trace?.Invoke($"UIA hit PID differs from foreground: {hit.Current.ProcessId != foreground}");
             // WebView2/Chromium can expose elements from a renderer process. Scope
             // inspection by the actual top-level HWND under the pointer, not PID.
             var pending = new LinkedList<(AutomationElement Node, int Depth)>();
@@ -59,8 +57,6 @@ internal static class LinkInspector
                 if (nativeHandle != IntPtr.Zero && !Native.SameRoot(nativeHandle, foregroundWindow)) continue;
                 var rect = current.BoundingRectangle;
                 if (rect.IsEmpty || !rect.Contains(point.X, point.Y)) continue;
-                trace?.Invoke($"Node {count}: role={current.ControlType.ProgrammaticName}; rendererPID={current.ProcessId != foreground}; " +
-                    $"bounds={(int)rect.Width}x{(int)rect.Height}; name={Describe(current.Name)}");
                 if (current.ControlType == ControlType.Hyperlink && rect.Width <= 2400 && rect.Height <= 180)
                 {
                     var candidates = new List<string?>();
@@ -71,10 +67,8 @@ internal static class LinkInspector
                     candidates.Add(current.Name);
                     foreach (var candidate in candidates)
                     {
-                        trace?.Invoke($"Hyperlink candidate: {Describe(candidate)}");
                         if (WebLink.Parse(candidate, accessibilityHyperlink: true) is { } link)
                         {
-                            trace?.Invoke("Resolved hyperlink through UI Automation.");
                             return new(link, Rectangle.FromLTRB((int)rect.Left, (int)rect.Top,
                                 (int)Math.Ceiling(rect.Right), (int)Math.Ceiling(rect.Bottom)), foreground);
                         }
@@ -90,11 +84,10 @@ internal static class LinkInspector
                     child = walker.GetNextSibling(child);
                 }
             }
-            if (ReadMsaa(point, foreground, trace) is { } accessibleLink) return accessibleLink;
-            trace?.Invoke("No complete web target exposed by the bounded hyperlink inspection.");
+            if (ReadMsaa(point, foreground) is { } accessibleLink) return accessibleLink;
         }
         catch (Exception e) when (e is ElementNotAvailableException or InvalidOperationException or
-            UnauthorizedAccessException or COMException) { trace?.Invoke($"Provider unavailable: {e.GetType().Name}"); }
+            UnauthorizedAccessException or COMException) { }
         return null;
     }
 
@@ -103,10 +96,7 @@ internal static class LinkInspector
         [MarshalAs(UnmanagedType.Interface)] out Accessibility.IAccessible accessible,
         [MarshalAs(UnmanagedType.Struct)] out object childId);
 
-    private static string Describe(string? value) => string.IsNullOrEmpty(value) ? "empty" :
-        $"{value.Length} chars, completeWebTarget={WebLink.Parse(value, true) is not null}";
-
-    private static Inspection? ReadMsaa(Point point, uint foreground, Action<string>? trace)
+    private static Inspection? ReadMsaa(Point point, uint foreground)
     {
         if (AccessibleObjectFromPoint(point, out var accessible, out var child) != 0 || accessible is null) return null;
         var objects = new List<object> { accessible };
@@ -117,14 +107,13 @@ internal static class LinkInspector
                 foreach (var id in new object[] { child, 0 }.Distinct())
                 {
                     var role = Convert.ToInt32(accessible.get_accRole(id));
-                    trace?.Invoke($"MSAA ancestor {depth}: role={role}");
                     if (role != 0x1e) continue; // ROLE_SYSTEM_LINK
                     accessible.accLocation(out var x, out var y, out var width, out var height, id);
                     var bounds = new Rectangle(x, y, width, height);
                     if (!bounds.Contains(point) || width > 2400 || height > 180) continue;
                     var link = WebLink.Parse(accessible.get_accValue(id), true) ?? WebLink.Parse(accessible.get_accName(id), true);
                     if (link is not null)
-                    { trace?.Invoke("Resolved hyperlink through MSAA."); return new(link, bounds, foreground); }
+                    return new(link, bounds, foreground);
                 }
                 if (accessible.accParent is not Accessibility.IAccessible parent || objects.Contains(parent)) break;
                 accessible = parent; objects.Add(parent); child = 0;
