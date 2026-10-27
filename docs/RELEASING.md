@@ -12,24 +12,24 @@ One repository contains two native implementations. Build and validate each plat
 
 Use platform-specific names so Windows packages cannot replace the Mac ZIP. A release can have all six files. GitHub's automatic Source code archives are not runnable applications.
 
-Windows is at version 0.1.1 and no Windows assets have been published yet. Actions artifacts and `BUILD-INFO.txt` distinguish builds by source commit. If 0.1.1 Windows assets already exist, the upload workflow rejects duplicate filenames; to replace them, remove only those Windows assets in Releases first (or bump the Windows version) and leave the Mac assets untouched.
+Windows is at version 0.1.1. Every push to `main` that passes the Windows workflow replaces the four `LinkPeek-Windows-0.1.1-*` files on release `v0.1.1` (the release must already exist; it is never created). Because those files change over time, `BUILD-INFO.txt` inside each ZIP records the exact source commit, and the checksum changes with every publish. Mac assets are never touched.
 
 The current macOS release is `v0.1.1`. Its tag predates the Windows port. If Windows packages are added to that release, **do not move or recreate the tag**: the Mac package still corresponds to that original tag, and the new Windows packages correspond to the selected workflow run's commit. `BUILD-INFO.txt` inside every Windows ZIP records that commit. Add a Windows section in the release notes with the build commit and validation status so users can distinguish them. For a single source tag covering both implementations, create a new release from a commit that contains both.
 
-## Add Windows assets to the existing v0.1.1 release
+## Windows assets on the existing v0.1.1 release
 
-This is the shortest route when a Mac release already exists:
+With the Mac release `v0.1.1` already in place, Windows assets are attached automatically; the manual steps below are for trying a build first or targeting another tag:
 
 1. Open [Actions → Windows](https://github.com/nqnhut92/LinkPeek/actions/workflows/windows.yml). Wait for the build on `main` to pass. Its x64/ARM64 jobs run the core tests on a Windows runner and create self-contained portable ZIPs. **desktop-checks** runs the hosted-hyperlink fixture, the UI layout and saved-PAT checks and a hover-card lifecycle test, and uploads **LinkPeek-UI-previews** (light/dark PNGs, kept 14 days). These checks do not replace testing real apps such as Teams.
 2. For a trial build, open that run's **Artifacts** section and download `LinkPeek-Windows-win-x64` (or `win-arm64`). You must be signed in to GitHub. Extract the outer Actions archive, then the application ZIP inside it. Keep the entire extracted application folder and run `LinkPeek.exe`.
 3. Run through the [Windows acceptance checklist](../Windows/README.md#windows-acceptance-checklist) on a Windows machine and note in the release notes what you actually tested.
-4. Back on the **Windows** workflow page, click **Run workflow**. Choose branch **main**, enter `v0.1.1` in **release_tag**, and run it. This builds the selected branch revision again, then attaches only the two Windows ZIPs and two checksums to that existing release. Leaving the field blank builds downloadable Actions artifacts without changing Releases.
+4. Pushing to `main` publishes automatically once the checks pass. To publish a different revision or to a different existing tag, open the **Windows** workflow page, click **Run workflow**, choose the branch, enter the tag (for example `v0.1.1`) in **release_tag**, and run it. Existing Windows files of the same names are replaced; leaving the field blank only builds Actions artifacts.
 5. Wait for both build jobs and **attach-to-release** to pass. Open [release v0.1.1](https://github.com/nqnhut92/LinkPeek/releases/tag/v0.1.1) and confirm the four Windows assets appear beside the existing Mac files. Verify the checksum after downloading.
 6. Click **Edit** on the release and append a Windows section: supported Windows versions, x64/ARM64 download names, portable extraction instructions, the Windows source commit from the run/BUILD-INFO, unsigned status and what was actually tested. Preserve the Mac instructions and validation notes.
 
-The workflow uses GitHub's built-in per-run token; no personal access token or repository secret is needed. It requests `contents: write` only for the manual upload job. An organization policy can still deny write access; in that case use the manual upload method below or ask a repository administrator to permit the workflow. Inputs are passed as environment variables, not interpolated into shell commands.
+The workflow uses GitHub's built-in per-run token; no personal access token or repository secret is needed. It requests `contents: write` only for the upload job, which runs on pushes to `main` and manual runs, never on pull requests. An organization policy can still deny write access; in that case use the manual upload method below or ask a repository administrator to permit the workflow. Inputs are passed as environment variables, not interpolated into shell commands.
 
-The upload job requires an existing release and never creates a tag/release, edits notes, deletes assets or uses `--clobber`. It rejects duplicate Windows asset names before upload. If an upload partially fails, inspect the release before retrying: remove only the incomplete Windows assets you intend to replace, or bump the Windows version for a distinct build. Never delete the Mac files to retry Windows publication.
+The upload job requires an existing release and never creates a tag/release, edits notes or deletes other assets. `--clobber` replaces only assets with the exact `LinkPeek-Windows-*` names, after verifying each ZIP against its checksum file. Uploads are not atomic: if one fails midway, a ZIP and its checksum on the release may briefly disagree; re-run the workflow to fix it. Runs are serialized so two pushes cannot interleave. To keep an older Windows build downloadable, bump the Windows version so the file names differ.
 
 ## Upload Windows assets manually
 

@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Optional EXISTING release tag to attach Windows ZIPs (e.g. v0.1.1). Blank = build artifacts only.'
+        description: 'Optional EXISTING release tag to attach Windows ZIPs to (e.g. v0.1.1); existing Windows assets are replaced. Blank = build artifacts only.'
         required: false
         type: string
         default: ''
@@ -64,37 +64,57 @@ jobs:
             Windows/artifacts/LinkPeek-Windows-*-${{ matrix.runtime }}.zip.sha256
           if-no-files-found: error
 
+  # Publishes the verified Windows packages to the existing GitHub release v<Windows version>
+  # after every successful push to main, and on a manual run for any existing tag. Never creates
+  # tags or releases, never edits release notes, never touches macOS assets: only the four
+  # LinkPeek-Windows-* files are added or replaced.
   attach-to-release:
-    if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
     needs: [build, desktop-checks]
     runs-on: windows-latest
     permissions:
       contents: write
+    concurrency:
+      group: windows-release-assets
+      cancel-in-progress: false
     steps:
       - uses: actions/download-artifact@v4
         with:
           pattern: LinkPeek-Windows-win-*
           path: release-assets
           merge-multiple: true
-      - name: Attach Windows packages to the selected existing release
+      - name: Add or replace Windows packages on the existing release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ inputs.release_tag }}
+          EVENT: ${{ github.event_name }}
         run: |
           $ErrorActionPreference = 'Stop'
-          if ([string]::IsNullOrWhiteSpace($env:RELEASE_TAG) -or $env:RELEASE_TAG.StartsWith('-')) {
-            throw 'Enter an existing release tag, such as v0.1.1.'
-          }
-          $json = gh release view $env:RELEASE_TAG --json assets
-          if ($LASTEXITCODE -ne 0) { throw 'Release not found or not accessible. Create it in Releases first.' }
-          $existing = @((ConvertFrom-Json ($json -join "`n")).assets | ForEach-Object { $_.name })
           $files = @(Get-ChildItem release-assets -File | Where-Object { $_.Name -match '^LinkPeek-Windows-.*\.zip(\.sha256)?$' })
           if ($files.Count -ne 4) { throw 'Expected two Windows ZIPs and their two SHA-256 files.' }
-          foreach ($file in $files) {
-            if ($existing -contains $file.Name) { throw "Asset already exists: $($file.Name). No assets were replaced. Use a new Windows version or remove only the intended Windows assets in Releases before retrying." }
+          # Each .sha256 must describe the ZIP uploaded beside it.
+          foreach ($zip in $files | Where-Object { $_.Name.EndsWith('.zip') }) {
+            $expected = ((Get-Content "$($zip.FullName).sha256" -Raw).Trim() -split '\s+')[0]
+            if ((Get-FileHash $zip.FullName -Algorithm SHA256).Hash -ne $expected) { throw "Checksum mismatch for $($zip.Name)." }
           }
-          gh release upload $env:RELEASE_TAG @($files.FullName)
+          $tag = $env:RELEASE_TAG
+          if ($env:EVENT -eq 'push') {
+            $version = [regex]::Match($files[0].Name, '^LinkPeek-Windows-(\d+\.\d+\.\d+[^-]*)-win-').Groups[1].Value
+            if (-not $version) { throw 'Cannot read the Windows version from the package name.' }
+            $tag = "v$version"
+          }
+          if ([string]::IsNullOrWhiteSpace($tag) -or $tag.StartsWith('-')) { throw 'Enter an existing release tag, such as v0.1.1.' }
+          gh release view $tag --json tagName | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            if ($env:EVENT -eq 'push') {
+              Write-Output "::warning::Release $tag does not exist, so nothing was published. Create it in Releases to enable automatic Windows assets."
+              exit 0
+            }
+            throw 'Release not found or not accessible. Create it in Releases first.'
+          }
+          # --clobber replaces only assets with these exact names.
+          gh release upload $tag @($files.FullName) --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Release upload failed. Check the release assets before retrying.' }
-          Write-Output 'Windows packages attached. Existing macOS assets and release notes were preserved.'
+          Write-Output "Windows packages for $env:GITHUB_SHA published to $tag. macOS assets and release notes were preserved."
