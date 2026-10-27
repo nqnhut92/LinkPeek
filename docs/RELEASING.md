@@ -12,13 +12,15 @@ One repository contains two native implementations. Build and validate each plat
 
 Use platform-specific names so Windows packages cannot replace the Mac ZIP. A release can have all six files. GitHub's automatic Source code archives are not runnable applications.
 
+Windows remains version 0.1.1 while the port is being finalized; do not create a new version/tag just for an iteration build. Actions artifacts and `BUILD-INFO.txt` distinguish builds by source commit. Before finalizing, use Actions downloads for testing rather than publishing updated release assets. If 0.1.1 Windows assets already exist, the upload workflow rejects duplicate filenames; update only those Windows assets deliberately when the version is final and leave the Mac assets untouched.
+
 The current macOS release is `v0.1.1`. Its tag predates the Windows port. If Windows packages are added to that release, **do not move or recreate the tag**: the Mac package still corresponds to that original tag, and the new Windows packages correspond to the selected workflow run's commit. `BUILD-INFO.txt` inside every Windows ZIP records that commit. Add a Windows section in the release notes with the build commit and validation status so users can distinguish them. For a single source tag covering both implementations, create a new release from a commit that contains both.
 
 ## Add Windows assets to the existing v0.1.1 release
 
 This is the shortest route when a Mac release already exists:
 
-1. Open [Actions → Windows](https://github.com/nqnhut92/LinkPeek/actions/workflows/windows.yml). Wait for the build on `main` to pass. Its x64/ARM64 jobs run the core tests on a Windows runner and create self-contained portable ZIPs.
+1. Open [Actions → Windows](https://github.com/nqnhut92/LinkPeek/actions/workflows/windows.yml). Wait for the build on `main` to pass. Its x64/ARM64 jobs run the core tests on a Windows runner and create self-contained portable ZIPs. **desktop-checks** tests a hosted-renderer fixture and produces **LinkPeek-UI-previews**, including light/dark Settings and hover cards. Native fixture checks do not replace actual Teams testing.
 2. For a trial build, open that run's **Artifacts** section and download `LinkPeek-Windows-win-x64` (or `win-arm64`). You must be signed in to GitHub. Extract the outer Actions archive, then the application ZIP inside it. Keep the entire extracted application folder and run `LinkPeek.exe`.
 3. Complete the [Windows acceptance checklist](../Windows/README.md#windows-acceptance-checklist) before presenting the port as stable. Until then, identify Windows assets as an initial unvalidated port in the release notes.
 4. Back on the **Windows** workflow page, click **Run workflow**. Choose branch **main**, enter `v0.1.1` in **release_tag**, and run it. This builds the selected branch revision again, then attaches only the two Windows ZIPs and two checksums to that existing release. Leaving the field blank builds downloadable Actions artifacts without changing Releases.

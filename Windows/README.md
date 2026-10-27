@@ -2,7 +2,13 @@
 
 Native Windows port of LinkPeek: a tray utility that previews web links as offline QR codes or Azure DevOps pull requests. The existing Swift/macOS application remains in the repository root; Windows code lives here.
 
-Targets Windows 10 22H2 / Windows 11, x64 or ARM64. Development requires the .NET 10 SDK. The published portable app includes its runtime and runs as the current user, without administrator privileges or a separate .NET installation. This first port is **not yet verified interactively on Windows**; see the acceptance checklist below.
+Targets Windows 10 22H2 / Windows 11, x64 or ARM64. Development requires the .NET 10 SDK. The published portable app includes its runtime and runs as the current user, without administrator privileges or a separate .NET installation. The initial build was reported to work in other apps and Teams web, but not Teams desktop. Windows 0.1.1 is still being finalized: the current build updates hosted-renderer detection and the interface; **actual desktop Teams compatibility and the refreshed UI still need user validation**. See the acceptance checklist below and [Windows changes](CHANGELOG.md).
+
+## Interface
+
+The Windows interface uses a compact borderless hover card, Segoe UI typography, accent actions, rounded controls, and a sidebar with General, Azure DevOps and About pages. Windows 11 supplies rounded outer-window corners and native dark title bars where supported. Windows 10 keeps the same control layout with the older system window frame. High contrast uses Windows system colors. The app's light/dark preference is read when a window opens; close and reopen Settings or the card after changing the Windows app theme.
+
+Windows CI renders ten PNG previews of the three Settings pages, QR card and PR card in light/dark themes. Download **LinkPeek-UI-previews** from a successful Actions run to review them. These are drawn from synthetic controls and data; the preview renderer does not take a screenshot of the user's desktop or read saved credentials.
 
 ## Build or package
 
@@ -15,7 +21,7 @@ dotnet run --project LinkPeek.Windows/LinkPeek.Windows.csproj
 ./publish.ps1 -Runtime win-arm64       # ARM64 portable ZIP + SHA-256
 ```
 
-The [Windows GitHub Actions workflow](https://github.com/nqnhut92/LinkPeek/actions/workflows/windows.yml) builds and tests both packages and uploads workflow artifacts. Pushes and pull requests only produce artifacts. A manual run can also attach the Windows assets to a specified **existing** GitHub release; see [Releasing](../docs/RELEASING.md). Nothing is released automatically on push, and the workflow does not sign the app. Packages are unsigned; company application-control policies or SmartScreen may require IT approval. Do not disable those controls. Keep the entire extracted folder, then run `LinkPeek.exe`; distributing the EXE alone omits its runtime dependencies.
+The [Windows GitHub Actions workflow](https://github.com/nqnhut92/LinkPeek/actions/workflows/windows.yml) builds and tests both packages, checks a synthetic cross-process hosted hyperlink, renders UI previews, and uploads workflow artifacts. Pushes and pull requests only produce artifacts. A manual run can also attach the Windows assets to a specified **existing** GitHub release, after both builds and desktop checks pass; see [Releasing](../docs/RELEASING.md). Nothing is released automatically on push, and the workflow does not sign the app. Packages are unsigned; company application-control policies or SmartScreen may require IT approval. Do not disable those controls. Keep the entire extracted folder, then run `LinkPeek.exe`; distributing the EXE alone omits its runtime dependencies.
 
 Outputs are `artifacts/LinkPeek-Windows-<version>-win-x64.zip` (or `win-arm64`) and the matching `.zip.sha256`. The version comes from `LinkPeek.Windows.csproj`. Each ZIP includes `BUILD-INFO.txt` with the Windows version, architecture and exact source commit, plus usage and license files. Builds from a source archive without Git metadata report an unknown commit. Packaging uses a fresh staging directory to keep old dependencies out of a new archive.
 
@@ -60,11 +66,32 @@ PR previews show title, author, branches, lifecycle and your vote. Confirmation 
 
 ## Detection across applications
 
-Detection uses Windows UI Automation and MSAA, with no application-name allowlist. It hit-tests the pointer, checks the foreground process, and examines a bounded neighborhood for hyperlink controls whose rectangles contain the pointer. Full URL values or full URL hyperlink names are accepted; prose, friendly labels and image-source URLs are not scraped. The known scheme-less `dev.azure.com/` form is normalized only for accessibility hyperlinks. No links are invoked as part of inspection.
+Detection uses Windows UI Automation and MSAA, with no application-name allowlist. It verifies that the pointer's native window belongs to the foreground top-level window, then examines a bounded neighborhood for hyperlink controls whose rectangles contain the pointer. A hosted WebView/Chromium renderer can have a different PID from the foreground app: this is allowed only within that same native root window. Inspection prioritizes up to eight ancestors of the hit text node; MSAA also checks hyperlink ancestors instead of only the exact text child. Full URL values or full URL hyperlink names are accepted; prose, friendly labels and image-source URLs are not scraped. The known scheme-less `dev.azure.com/` form is normalized only for accessibility hyperlinks. No links are invoked as part of inspection.
 
 Teams, Outlook, browsers, PDF readers and other applications vary by version and accessibility provider. A displayed friendly name does not establish that its target is available to UI Automation. Test the particular apps used at your company; no cross-app compatibility is claimed yet. Elevated apps, protected surfaces and company policies may block access. LinkPeek does not request elevation or bypass those controls; use **Open link…** if needed.
 
-Inspection runs on one MTA worker away from the UI thread with a soft 350 ms traversal budget and at most 24 visited nodes / depth 3. A misbehaving provider can still block a native call past that budget; no additional worker is spawned while it is pending, so the tray and manual entry stay responsive but automatic hover can stall until the provider returns. Detection does not capture screen pixels or record application text. API requests use HTTPS to `dev.azure.com`, disable redirects/cookies and return sanitized errors.
+Inspection runs on one MTA worker away from the UI thread with a soft 350 ms UIA traversal budget, at most 24 visited UIA nodes, eight ancestor levels and three descendant levels. A misbehaving provider can still block a native call past that budget; no additional worker is spawned while it is pending, so the tray and manual entry stay responsive but automatic hover can stall until the provider returns. Detection does not capture screen pixels or record application text. API requests use HTTPS to `dev.azure.com`, disable redirects/cookies and return sanitized errors.
+
+### Diagnose desktop Teams or another unsupported app
+
+1. Right-click the tray icon and choose **Diagnose hovered link…**.
+2. Read the notice, click OK, then move onto the problem link within three seconds. Keep the source app foreground and the pointer still.
+3. A report opens with roles, PID relationships, node sizes, whether candidate fields contain complete URLs, and the resolution path or timeout. It does **not** contain URL values, friendly link labels, chat content, PATs or account details. Nothing is uploaded or saved automatically.
+4. Use **Copy report** if you choose to share that diagnostic text. If a provider is stalled, restart LinkPeek before another attempt. The diagnostic path shares the single-worker limit.
+
+New Teams desktop uses a hosted renderer and can expose a different accessibility tree from Teams web. The current 0.1.1 changes address a confirmed limitation in LinkPeek's old same-PID filter and expand hyperlink ancestry inspection; they are not proof of compatibility with every Teams build. A complete URL visibly shown in a chat still has to be exposed as a hyperlink target by that build.
+
+### Native regression and preview checks
+
+From `Windows/` on a Windows development machine:
+
+```powershell
+dotnet run --project LinkPeek.DesktopChecks/LinkPeek.DesktopChecks.csproj -c Release -- artifacts/ui-previews
+```
+
+The harness starts a synthetic host window and a distinct child-renderer process, then checks that a hyperlink resolves through the host while plain URL text and a foreign root window are rejected. It also renders the ten light/dark UI previews. The synthetic fixture is not Teams and does not establish real Teams behavior. The harness requires a Windows desktop session, and its checks cannot run in Linux.
+
+For only the synthetic appearance previews, the Windows app also accepts `LinkPeek.exe --render-ui <output-folder>`; this mode does not start the tray workflow, mutate preferences/startup settings, access PATs or call Azure DevOps.
 
 ## Windows acceptance checklist
 

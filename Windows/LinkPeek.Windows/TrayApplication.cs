@@ -19,6 +19,7 @@ internal sealed class TrayApplication : ApplicationContext
     private uint anchorProcess;
     private string? suppressed;
     private bool paused;
+    private bool diagnosing;
     private TimeSpan outsideSince;
     private TimeSpan captureUntil;
     private bool snipKeyWasDown;
@@ -37,14 +38,17 @@ internal sealed class TrayApplication : ApplicationContext
             finally { DestroyIcon(handle); }
         }
         else icon = (Icon)SystemIcons.Application.Clone();
-        var menu = new ContextMenuStrip();
+        var menuColors = Palette.Current;
+        var menu = new ContextMenuStrip { BackColor = menuColors.Surface, ForeColor = menuColors.Text,
+            Font = UI.TextFont(), Padding = new Padding(4), Renderer = new ToolStripProfessionalRenderer(new MenuColors(menuColors)) };
         menu.Items.Add("Open link…", null, (_, _) => OpenLink());
         menu.Items.Add("Settings…", null, (_, _) => OpenSettings());
+        menu.Items.Add("Diagnose hovered link…", null, async (_, _) => await DiagnoseHoverAsync());
         var pause = new ToolStripMenuItem("Pause hover") { CheckOnClick = true };
         pause.CheckedChanged += (_, _) => { paused = pause.Checked; CloseCard(); gate.Reset(); }; menu.Items.Add(pause);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("About LinkPeek", null, (_, _) => MessageBox.Show(
-            "LinkPeek for Windows 0.1.1\nOffline QR codes and Azure DevOps PR previews.\nMIT License · See LICENSE alongside the executable.", "LinkPeek"));
+            $"LinkPeek for Windows {SettingsForm.AppVersion}\nOffline QR codes and Azure DevOps PR previews.\nMIT License · See LICENSE alongside the executable.", "LinkPeek"));
         menu.Items.Add("Quit", null, (_, _) => ExitThread());
         tray = new NotifyIcon { Text = "LinkPeek", Icon = icon, ContextMenuStrip = menu, Visible = true };
         tray.DoubleClick += (_, _) => OpenSettings();
@@ -80,18 +84,51 @@ internal sealed class TrayApplication : ApplicationContext
     private void OpenLink()
     {
         CloseCard(); gate.Reset();
-        using var dialog = new Form { Text = "LinkPeek · Open link", ClientSize = new Size(540, 150),
+        using var dialog = new ModernForm { Text = "LinkPeek · Open link", ClientSize = new Size(540, 170),
             AutoScaleDimensions = new SizeF(96, 96), AutoScaleMode = AutoScaleMode.Dpi,
             StartPosition = FormStartPosition.CenterScreen, Font = new Font("Segoe UI", 10),
             FormBorderStyle = FormBorderStyle.FixedDialog, MinimizeBox = false, MaximizeBox = false };
-        var label = new Label { Text = "Paste a complete HTTP or HTTPS URL", Location = new Point(16, 16), AutoSize = true };
-        var input = new TextBox { Location = new Point(16, 48), Width = 505 };
-        var open = new Button { Text = "Open", Location = new Point(420, 92), Width = 100, DialogResult = DialogResult.OK };
+        var label = UI.Label("Paste a complete HTTP or HTTPS URL", 11, bold: true); label.Location = new Point(24, 20);
+        var input = new TextBox { Location = new Point(24, 57), Width = 490,
+            BackColor = Palette.Current.Surface, ForeColor = Palette.Current.Text };
+        var open = UI.Button("Open link", () => { }, true); open.Location = new Point(399, 110); open.DialogResult = DialogResult.OK;
         dialog.Controls.AddRange([label, input, open]); dialog.AcceptButton = open;
         if (dialog.ShowDialog() != DialogResult.OK) return;
         if (WebLink.Parse(input.Text.Trim()) is not { } link)
         { MessageBox.Show("Enter a complete HTTP or HTTPS URL without embedded credentials.", "LinkPeek"); return; }
         ShowCard(link, Rectangle.Empty, Cursor.Position, true);
+    }
+
+    private async Task DiagnoseHoverAsync()
+    {
+        if (diagnosing) return;
+        MessageBox.Show("After clicking OK, place the pointer over the problem link and keep it still.\n\n" +
+            "LinkPeek will inspect it after 3 seconds. The report contains only accessibility roles, process relationships and URL-presence flags. No chat text, URL values or credentials are recorded.",
+            "Diagnose hovered link", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        diagnosing = true; CloseCard(); gate.Reset();
+        var report = "";
+        try
+        {
+            await Task.Delay(3000);
+            if (inspection is { IsCompleted: false }) await Task.WhenAny(inspection, Task.Delay(2000));
+            if (inspection is { IsCompleted: false })
+                report = "An existing accessibility request has not returned. Restart LinkPeek and try Diagnose again.\nThe provider may be stalled; no additional worker was started.";
+            else
+            {
+                var lines = new List<string> { $"LinkPeek Windows {SettingsForm.AppVersion}",
+                    $"Windows: {Environment.OSVersion.Version}", "No URL values, labels or chat contents are included.", "" };
+                var point = Cursor.Position; var window = Native.GetForegroundWindow();
+                Native.GetWindowThreadProcessId(window, out var pid);
+                inspectedPoint = point; inspectedProcess = pid;
+                inspection = Task.Run(() => LinkInspector.Inspect(point, pid, window, lines.Add));
+                if (await Task.WhenAny(inspection, Task.Delay(2500)) != inspection)
+                    report = "The app's accessibility provider did not respond within 2.5 seconds.\nNo additional worker was started. Restart LinkPeek if automatic hover remains stalled.";
+                else { await inspection; report = string.Join(Environment.NewLine, lines); }
+            }
+        }
+        catch { report = "Accessibility inspection failed. No content was recorded."; }
+        finally { diagnosing = false; }
+        new DiagnosticForm(report).Show();
     }
 
     private void CloseCard()
@@ -118,7 +155,7 @@ internal sealed class TrayApplication : ApplicationContext
         var snip = (Native.KeyDown(0x5B) || Native.KeyDown(0x5C)) && Native.KeyDown(0x10) && Native.KeyDown(0x53);
         if (snip && !snipKeyWasDown && card is not null) captureUntil = clock.Elapsed + TimeSpan.FromSeconds(20);
         snipKeyWasDown = snip;
-        if (paused || settings is { IsDisposed: false, Visible: true }) return;
+        if (paused || diagnosing || settings is { IsDisposed: false, Visible: true }) return;
         var point = Cursor.Position;
         var foreground = Native.ForegroundProcess();
         if (card is { IsDisposed: false })

@@ -2,18 +2,19 @@ using QRCoder;
 
 namespace LinkPeek.Windows;
 
-internal sealed class CardForm : Form
+internal sealed class CardForm : ModernForm
 {
     private readonly FlowLayoutPanel body = new()
     {
         FlowDirection = FlowDirection.TopDown, WrapContents = false,
-        AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(16),
-        BackColor = SystemColors.Window
+        AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(24, 18, 24, 20),
+        BackColor = Palette.Current.Surface, MinimumSize = new Size(380, 0)
     };
-    private readonly Label title = new() { AutoSize = true, MaximumSize = new Size(350, 0), Font = new Font("Segoe UI", 12, FontStyle.Bold) };
-    private readonly Label detail = new() { AutoSize = true, MaximumSize = new Size(350, 0) };
-    private readonly Label status = new() { AutoSize = true, MaximumSize = new Size(350, 0), Margin = new Padding(3, 12, 3, 8) };
-    private readonly FlowLayoutPanel actions = new() { AutoSize = true, MaximumSize = new Size(355, 0), WrapContents = true };
+    private readonly Label title = UI.Label("", 15, bold: true, width: 332);
+    private readonly Label detail = UI.Label("", 9, secondary: true, width: 332);
+    private readonly Label status = UI.Label("", 9, secondary: true, width: 332);
+    private readonly FlowLayoutPanel actions = new() { AutoSize = true, MaximumSize = new Size(336, 0),
+        WrapContents = true, BackColor = Palette.Current.Surface, Margin = new Padding(0, 14, 0, 0) };
     private readonly WebLink link;
     private readonly AzureDevOpsClient? client;
     private readonly ApprovalService? approvals;
@@ -30,38 +31,47 @@ internal sealed class CardForm : Form
     protected override bool ShowWithoutActivation => !Manual;
     protected override CreateParams CreateParams
     {
-        get { var p = base.CreateParams; p.ExStyle |= 0x00000080; if (!Manual) p.ExStyle |= 0x08000000; return p; }
+        get { var p = base.CreateParams; p.ExStyle |= 0x00000080; p.ClassStyle |= 0x00020000; if (!Manual) p.ExStyle |= 0x08000000; return p; }
     }
 
     public CardForm(WebLink link, AzureDevOpsClient? client, ApprovalService? approvals,
-        Preferences preferences, bool manual, Action copied, Action notify)
+        Preferences preferences, bool manual, Action copied, Action notify, Snapshot? previewSnapshot = null)
     {
         this.link = link; this.client = client; this.approvals = approvals;
         this.preferences = preferences; this.copied = copied; this.notify = notify; Manual = manual;
         AutoScaleDimensions = new SizeF(96, 96); AutoScaleMode = AutoScaleMode.Dpi;
         Text = "LinkPeek"; ShowInTaskbar = false; TopMost = true;
-        FormBorderStyle = FormBorderStyle.FixedToolWindow; MaximizeBox = false; MinimizeBox = false;
-        StartPosition = FormStartPosition.Manual; Font = new Font("Segoe UI", 10);
-        BackColor = SystemColors.Window; ForeColor = SystemColors.WindowText;
+        FormBorderStyle = FormBorderStyle.None; MaximizeBox = false; MinimizeBox = false;
+        StartPosition = FormStartPosition.Manual;
+        BackColor = Colors.Surface; ForeColor = Colors.Text; Padding = new Padding(1);
         AutoSize = true; AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        var header = new Panel { Width = 332, Height = 32, Margin = new Padding(0, 0, 0, 13) };
+        var brand = UI.Label("LINKPEEK", 8, secondary: true, bold: true); brand.Location = new Point(32, 7);
+        var logo = UI.Logo(24); logo.Location = new Point(0, 2); header.Controls.Add(logo);
+        var close = UI.Button("×", Close); close.AccessibleName = "Close card"; close.Quiet = true;
+        close.Font = UI.TextFont(14); close.Padding = Padding.Empty; close.AutoSize = false; close.Size = new Size(28, 28);
+        close.MinimumSize = Size.Empty; close.Location = new Point(306, 0); close.TabStop = true;
+        header.Controls.Add(brand); header.Controls.Add(close); body.Controls.Add(header);
+        title.Margin = new Padding(0, 0, 0, 8); detail.Margin = new Padding(0, 0, 0, 8);
+        status.Margin = new Padding(0, 12, 0, 0);
         body.Controls.Add(title); body.Controls.Add(detail); body.Controls.Add(status); body.Controls.Add(actions);
         Controls.Add(body);
         title.Text = link.PullRequest is { } pr ? $"Pull request #{pr.Id}" : "Share this link";
-        detail.Text = link.Text.Length > 180 ? link.Text[..180] + "…" : link.Text;
-        AddAction("Copy Link", () => Copy(false));
+        detail.Text = link.Uri.Host + "\n" + (link.Text.Length > 120 ? link.Text[..120] + "…" : link.Text);
+        AddAction("Copy link", () => Copy(false), link.PullRequest is null);
         if (link.PullRequest is null)
         {
             try
             {
                 using var data = QRCodeGenerator.GenerateQrCode(link.Text, QRCodeGenerator.ECCLevel.M);
                 using var png = new PngByteQRCode(data);
-                var pixels = Math.Max(1, 264 / data.ModuleMatrix.Count);
+                var pixels = Math.Max(1, 216 / data.ModuleMatrix.Count);
                 using var stream = new MemoryStream(png.GetGraphic(pixels));
                 using var image = Image.FromStream(stream);
-                qr = new PictureBox { Image = new Bitmap(image), SizeMode = PictureBoxSizeMode.AutoSize,
-                    Margin = new Padding(3, 14, 3, 14), BackColor = Color.White };
-                body.Controls.Add(qr); body.Controls.SetChildIndex(qr, 2);
-                status.Text = "Generated offline · Full URL preserved";
+                qr = new PictureBox { Image = new Bitmap(image), SizeMode = PictureBoxSizeMode.CenterImage,
+                    Size = new Size(332, image.Height + 28), Margin = new Padding(0, 10, 0, 0), BackColor = Color.White };
+                body.Controls.Add(qr); body.Controls.SetChildIndex(qr, 3);
+                status.Text = "Scan to open  ·  Generated on your device";
                 AddAction("Copy QR", () => Copy(true));
             }
             catch (Exception e) when (e is QRCoder.Exceptions.DataTooLongException or ArgumentException)
@@ -69,20 +79,20 @@ internal sealed class CardForm : Form
         }
         else
         {
-            approve = AddAction(preferences.SkipConfirmation ? "Approve immediately" : "Approve…", async () => await ApproveAsync());
+            approve = AddAction(preferences.SkipConfirmation ? "Approve immediately" : "Approve…", async () => await ApproveAsync(), true);
             approve.Enabled = false;
             AddAction("Refresh", async () => await RefreshAsync());
             if (preferences.SkipConfirmation) status.Text = "Confirmation is off: Approve sends your vote after verification.";
         }
-        AddAction("Close", Close);
-        Shown += async (_, _) => { if (link.PullRequest is not null) await RefreshAsync(); ClampToScreen(); };
+        if (previewSnapshot is not null) Render(previewSnapshot);
+        Shown += async (_, _) => { if (link.PullRequest is not null && previewSnapshot is null) await RefreshAsync(); ClampToScreen(); };
         FormClosed += (_, _) => { lifetime.Cancel(); qr?.Image?.Dispose(); };
     }
 
-    private Button AddAction(string text, Action action)
+    private Button AddAction(string text, Action action, bool primary = false)
     {
-        var button = new Button { Text = text, AutoSize = true, Padding = new Padding(4) };
-        button.Click += (_, _) => action(); actions.Controls.Add(button); return button;
+        var button = UI.Button(text, action, primary);
+        button.Margin = new Padding(0, 0, 8, 6); actions.Controls.Add(button); return button;
     }
 
     private void Copy(bool image)

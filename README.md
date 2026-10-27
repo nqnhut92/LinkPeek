@@ -9,7 +9,7 @@ Both native implementations live in this repository and have separate build pipe
 | macOS | macOS 13+; Xcode with Swift 6 to build | `Sources/`, `Tests/`, `LinkPeek.xcodeproj`; instructions below | `LinkPeek-<version>.zip` |
 | Windows | Windows 10 22H2 / Windows 11, x64 or ARM64; .NET 10 SDK to build | [`Windows/`](Windows/README.md) | `LinkPeek-Windows-<version>-win-x64.zip` or `-win-arm64.zip` |
 
-The Windows portable package includes its .NET runtime and needs no installer or administrator privileges. It is an initial port; interactive Windows acceptance testing is still required. Windows uses QRCoder; the macOS app has no third-party dependencies. Native Liquid Glass is available on macOS 26+.
+The Windows portable package includes its .NET runtime and needs no installer or administrator privileges. Windows 0.1.1 is still being finalized, with a modern light/dark interface, hosted-renderer link detection and opt-in link diagnostics; actual desktop Teams compatibility still needs user retesting. See the [Windows changelog](Windows/CHANGELOG.md). Windows uses QRCoder; the macOS app has no third-party dependencies. Native Liquid Glass is available on macOS 26+.
 
 ## Install on Windows
 

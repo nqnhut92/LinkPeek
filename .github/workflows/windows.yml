@@ -17,6 +17,28 @@ permissions:
   contents: read
 
 jobs:
+  desktop-checks:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: Windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Verify hosted links and render light/dark UI previews
+        shell: pwsh
+        run: |
+          dotnet run --project LinkPeek.DesktopChecks/LinkPeek.DesktopChecks.csproj --configuration Release -- artifacts/ui-previews
+          if ($LASTEXITCODE -ne 0) { throw 'Windows desktop regression checks failed.' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: LinkPeek-UI-previews
+          path: Windows/artifacts/ui-previews/
+          if-no-files-found: warn
+
   build:
     runs-on: windows-latest
     strategy:
@@ -43,7 +65,7 @@ jobs:
 
   attach-to-release:
     if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
-    needs: build
+    needs: [build, desktop-checks]
     runs-on: windows-latest
     permissions:
       contents: write
