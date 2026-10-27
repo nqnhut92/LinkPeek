@@ -37,6 +37,7 @@ internal sealed class TrayApplication : IDisposable
     public TrayApplication(App app)
     {
         this.app = app;
+        App.InstallCrashGuards(NotifyRecovered);
         using (var stream = System.Windows.Application.GetResourceStream(App.Asset("LinkPeek.ico")).Stream)
             icon = new Icon(stream, WinForms.SystemInformation.SmallIconSize);
         menu = CreateMenu(OpenLink, () => OpenSettings(), async () => await DiagnoseHoverAsync(),
@@ -49,8 +50,28 @@ internal sealed class TrayApplication : IDisposable
         tray = new WinForms.NotifyIcon { Text = "LinkPeek", Icon = icon, Visible = true };
         tray.MouseUp += (_, e) => { if (e.Button == WinForms.MouseButtons.Right) ShowMenu(); };
         tray.DoubleClick += (_, _) => OpenSettings();
+        App.FollowSystemTheme(force: true);
+        Microsoft.Win32.SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
         ReloadClient();
         timer.Tick += (_, _) => Tick(); timer.Start();
+    }
+
+    private void OnUserPreferenceChanged(object? sender, Microsoft.Win32.UserPreferenceChangedEventArgs e)
+    {
+        if (e.Category is Microsoft.Win32.UserPreferenceCategory.General or Microsoft.Win32.UserPreferenceCategory.Color or
+            Microsoft.Win32.UserPreferenceCategory.VisualStyle or Microsoft.Win32.UserPreferenceCategory.Accessibility)
+            app.Dispatcher.BeginInvoke(() => App.FollowSystemTheme(force: true));
+    }
+
+    private bool recoveryShown;
+    private void NotifyRecovered()
+    {
+        if (tray is null) return; // Still constructing.
+        CloseCard(); gate.Reset();
+        if (recoveryShown || !tray.Visible) return;
+        recoveryShown = true;
+        tray.ShowBalloonTip(5000, "LinkPeek", "LinkPeek recovered from an unexpected error and is still running. Details: " +
+            CrashLog.FilePath, WinForms.ToolTipIcon.Warning);
     }
 
     // An empty style keeps WPF UI's window style (which sets AllowsTransparency) off this helper.
@@ -233,6 +254,7 @@ internal sealed class TrayApplication : IDisposable
     public void Dispose()
     {
         if (!timer.IsEnabled && !tray.Visible) return;
+        Microsoft.Win32.SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
         timer.Stop(); CloseCard(); settings?.Close(); menuHost.Close();
         approvals?.Invalidate(); client?.Dispose(); tray.Visible = false; tray.Dispose(); icon.Dispose();
     }

@@ -201,6 +201,52 @@ internal static class UiPreview
 
     // Saved-PAT state: the mask must sit exactly where typed glyphs appear, read as a placeholder,
     // leave the PasswordBox empty, have no automation peer, and disappear as soon as typing starts.
+    // Long-running tray sessions open and close many cards. Each cycle must leave no window,
+    // GDI or USER handles behind, and an unchanged theme must not be re-applied per hover.
+    public static string VerifyCardLifecycle(int cycles = 200)
+    {
+        App.PreviewMode = false;
+        _ = App.Instance;
+        App.FollowSystemTheme(force: true);
+        var theme = Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme();
+        var themeChanges = 0;
+        Wpf.Ui.Appearance.ThemeChangedEvent counter = (_, _) => themeChanges++;
+        Wpf.Ui.Appearance.ApplicationThemeManager.Changed += counter;
+        var web = WebLink.Parse("https://example.org/linkpeek/lifecycle?q=1#x")!;
+        var pr = WebLink.Parse("https://dev.azure.com/contoso/Platform/_git/linkpeek/pullrequest/7")!;
+        var process = System.Diagnostics.Process.GetCurrentProcess().Handle;
+        (uint Gdi, uint User) Handles() => (GetGuiResources(process, 0), GetGuiResources(process, 1));
+        void Cycle(int i)
+        {
+            App.FollowSystemTheme();
+            var card = new CardWindow(i % 2 == 0 ? web : pr, null, null, new Preferences(), false, () => { }, () => { });
+            card.Place(new System.Drawing.Rectangle(200 + i % 50, 200, 120, 18), new System.Drawing.Point(210 + i % 50, 205));
+            card.Show(); App.DoEvents();
+            if (card.ScreenBounds.IsEmpty) throw new InvalidOperationException("Card has no screen bounds after Show.");
+            card.Close(); App.DoEvents();
+        }
+        try
+        {
+            for (var i = 0; i < 20; i++) Cycle(i);
+            GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(); App.DoEvents();
+            var before = Handles();
+            for (var i = 0; i < cycles; i++) Cycle(i);
+            GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(); App.DoEvents();
+            var after = Handles();
+            var open = Application.Current.Windows.OfType<CardWindow>().Count();
+            var report = $"{cycles} card cycles: GDI {before.Gdi}->{after.Gdi}, USER {before.User}->{after.User}, open cards {open}, theme re-applied {themeChanges}x";
+            if (open != 0) throw new InvalidOperationException("Closed cards are still registered as windows. " + report);
+            if (after.Gdi > before.Gdi + 40 || after.User > before.User + 40) throw new InvalidOperationException("Card lifecycle leaks handles. " + report);
+            if (themeChanges != 0) throw new InvalidOperationException("Unchanged Windows theme was re-applied during hover. " + report);
+            if (Wpf.Ui.Appearance.ApplicationThemeManager.GetAppTheme() != theme) throw new InvalidOperationException("Theme changed during the lifecycle check.");
+            return report;
+        }
+        finally { Wpf.Ui.Appearance.ApplicationThemeManager.Changed -= counter; }
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint GetGuiResources(IntPtr process, uint flags);
+
     public static void VerifySavedPatMask(string directory)
     {
         App.PreviewMode = true;

@@ -6,6 +6,8 @@ This Windows version is not final. Iteration builds keep version 0.1.1; use the 
 
 ### Current iteration
 
+- Fix the tray app quitting after running for a while. WPF ends the process on an unhandled UI exception, where the previous WinForms loop showed a dialog. UI-thread and tray-icon exceptions are now logged to `%LOCALAPPDATA%\LinkPeek\crash.log` and handled; LinkPeek closes the current card, shows one notification and keeps running. The theme is re-applied only when Windows' theme or accent actually changes, instead of reloading theme resources on every hover.
+- CI opens and closes 200 hover cards and fails on leaked windows, GDI/USER handles or per-hover theme reloads.
 - Rebuild the Windows interface on WPF and WPF UI 4.3.0 (Fluent Design) instead of custom-drawn WinForms controls: Mica Settings window with `NavigationView` and settings cards, Fluent toggle switches, slider, text and password inputs, `InfoBar` status messages, Fluent System Icons, a Fluent tray context menu, and ContentDialog-style dialogs for Open link, diagnostics, approval and PAT removal.
 - Redesign the hover card as a Fluent flyout with a vector QR code, icon detail rows and inline warnings/errors. Positioning, focus behavior (hover cards never activate), dwell, suppression and the approval flow are unchanged.
 - Settings apply immediately; the organization is saved when leaving its field. Removing a PAT now asks for confirmation.

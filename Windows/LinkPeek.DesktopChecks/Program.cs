@@ -37,6 +37,7 @@ internal static class Program
             if (previews.Count == 0 || previews.Any(file => !File.Exists(file))) throw new Exception("UI previews were not written.");
             Console.WriteLine($"PASS: {previews.Count} light/dark previews at 100%, 150% and 200% scale; layout audit found no clipped or overflowing controls.");
             UiPreview.VerifySavedPatMask(output);
+            Console.WriteLine("PASS: " + UiPreview.VerifyCardLifecycle());
             Console.WriteLine("PASS: saved-PAT mask aligns with typed glyphs, uses placeholder tone, keeps the input empty and hides on typing.");
             return 0;
         }
