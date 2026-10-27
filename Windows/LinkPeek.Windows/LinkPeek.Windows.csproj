@@ -16,10 +16,12 @@
   <ItemGroup>
     <ProjectReference Include="../LinkPeek.Core/LinkPeek.Core.csproj" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
     <Content Include="../../LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../README.md" Link="README-Windows.md" CopyToOutputDirectory="PreserveNewest" />
-    <EmbeddedResource Include="../../Resources/AppIcon.png" Link="AppIcon.png" />
+    <Resource Include="../../Resources/AppIcon.png" Link="Assets/AppIcon.png" />
+    <Resource Include="LinkPeek.ico" Link="Assets/LinkPeek.ico" />
   </ItemGroup>
   <Target Name="RetainRuntimeLicenses" AfterTargets="Publish" Condition="'$(SelfContained)' == 'true'">
     <ItemGroup>

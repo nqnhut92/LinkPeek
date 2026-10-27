@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
@@ -31,10 +32,12 @@ internal static class Program
             var output = args.Length > 0 ? args[0] : Path.Combine(Environment.CurrentDirectory, "artifacts", "ui-previews");
             Directory.CreateDirectory(output);
             VerifyHostedHyperlink(Path.Combine(output, "hosted-link-check.txt"));
-            UiPreview.Render(output);
-            if (Directory.GetFiles(output, "*.png").Length != 10) throw new Exception("Expected ten light/dark UI previews.");
             Console.WriteLine("PASS: cross-process hosted hyperlink, plain-text rejection and foreign-window rejection.");
-            Console.WriteLine("PASS: ten settings/QR/PR previews rendered from synthetic data.");
+            var previews = UiPreview.Render(output);
+            if (previews.Count == 0 || previews.Any(file => !File.Exists(file))) throw new Exception("UI previews were not written.");
+            Console.WriteLine($"PASS: {previews.Count} light/dark previews at 100%, 150% and 200% scale; layout audit found no clipped or overflowing controls.");
+            UiPreview.VerifySavedPatMask(output);
+            Console.WriteLine("PASS: saved-PAT mask aligns with typed glyphs, uses placeholder tone, keeps the input empty and hides on typing.");
             return 0;
         }
         catch (Exception error)

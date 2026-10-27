@@ -1,17 +1,25 @@
 using System.Diagnostics;
+using System.Drawing;
+using System.Windows.Controls.Primitives;
+using System.Windows.Threading;
+using Wpf.Ui.Controls;
+using WinForms = System.Windows.Forms;
 
 namespace LinkPeek.Windows;
 
-internal sealed class TrayApplication : ApplicationContext
+internal sealed class TrayApplication : IDisposable
 {
-    private readonly NotifyIcon tray;
+    private readonly App app;
+    private readonly WinForms.NotifyIcon tray;
     private readonly Icon icon;
-    private readonly System.Windows.Forms.Timer timer = new() { Interval = 120 };
+    private readonly System.Windows.Controls.ContextMenu menu;
+    private readonly System.Windows.Window menuHost;
+    private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(120) };
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly Preferences preferences = Preferences.Load();
     private readonly DwellGate gate = new();
-    private CardForm? card;
-    private SettingsForm? settings;
+    private CardWindow? card;
+    private SettingsWindow? settings;
     private Task<Inspection?>? inspection;
     private Point inspectedPoint;
     private uint inspectedProcess;
@@ -26,39 +34,62 @@ internal sealed class TrayApplication : ApplicationContext
     private AzureDevOpsClient? client;
     private ApprovalService? approvals;
 
-    public TrayApplication()
+    public TrayApplication(App app)
     {
-        using var stream = typeof(TrayApplication).Assembly.GetManifestResourceStream("LinkPeek.Windows.AppIcon.png");
-        if (stream is not null)
-        {
-            using var image = Image.FromStream(stream);
-            using var bitmap = new Bitmap(image, new Size(32, 32));
-            var handle = bitmap.GetHicon();
-            try { using var borrowed = Icon.FromHandle(handle); icon = (Icon)borrowed.Clone(); }
-            finally { DestroyIcon(handle); }
-        }
-        else icon = (Icon)SystemIcons.Application.Clone();
-        var menuColors = Palette.Current;
-        var menu = new ContextMenuStrip { BackColor = menuColors.Surface, ForeColor = menuColors.Text,
-            Font = UI.TextFont(), Padding = new Padding(4), Renderer = new ToolStripProfessionalRenderer(new MenuColors(menuColors)) };
-        menu.Items.Add("Open link…", null, (_, _) => OpenLink());
-        menu.Items.Add("Settings…", null, (_, _) => OpenSettings());
-        menu.Items.Add("Diagnose hovered link…", null, async (_, _) => await DiagnoseHoverAsync());
-        var pause = new ToolStripMenuItem("Pause hover") { CheckOnClick = true };
-        pause.CheckedChanged += (_, _) => { paused = pause.Checked; CloseCard(); gate.Reset(); }; menu.Items.Add(pause);
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("About LinkPeek", null, (_, _) => MessageBox.Show(
-            $"LinkPeek for Windows {SettingsForm.AppVersion}\nOffline QR codes and Azure DevOps PR previews.\nMIT License · See LICENSE alongside the executable.", "LinkPeek"));
-        menu.Items.Add("Quit", null, (_, _) => ExitThread());
-        tray = new NotifyIcon { Text = "LinkPeek", Icon = icon, ContextMenuStrip = menu, Visible = true };
+        this.app = app;
+        using (var stream = System.Windows.Application.GetResourceStream(App.Asset("LinkPeek.ico")).Stream)
+            icon = new Icon(stream, WinForms.SystemInformation.SmallIconSize);
+        menu = CreateMenu(OpenLink, () => OpenSettings(), async () => await DiagnoseHoverAsync(),
+            value => { paused = value; CloseCard(); gate.Reset(); }, () => OpenSettings(SettingsPage.About), Quit);
+        // A WPF popup only dismisses on outside clicks when one of our windows is foreground,
+        // so the tray menu opens from an invisible, off-screen owner window.
+        menuHost = CreateMenuHost();
+        menu.PlacementTarget = menuHost;
+        menu.Closed += (_, _) => menuHost.Hide();
+        tray = new WinForms.NotifyIcon { Text = "LinkPeek", Icon = icon, Visible = true };
+        tray.MouseUp += (_, e) => { if (e.Button == WinForms.MouseButtons.Right) ShowMenu(); };
         tray.DoubleClick += (_, _) => OpenSettings();
         ReloadClient();
         timer.Tick += (_, _) => Tick(); timer.Start();
     }
 
-    [System.Runtime.InteropServices.DllImport("user32.dll")]
-    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-    private static extern bool DestroyIcon(IntPtr icon);
+    // An empty style keeps WPF UI's window style (which sets AllowsTransparency) off this helper.
+    internal static System.Windows.Window CreateMenuHost() => new()
+    {
+        Style = new System.Windows.Style(typeof(System.Windows.Window)), WindowStyle = System.Windows.WindowStyle.None,
+        ShowInTaskbar = false, ShowActivated = true, Width = 1, Height = 1, Left = -32000, Top = -32000,
+        ResizeMode = System.Windows.ResizeMode.NoResize
+    };
+
+    internal static System.Windows.Controls.ContextMenu CreateMenu(Action openLink, Action openSettings, Action diagnose,
+        Action<bool> pauseChanged, Action about, Action quit)
+    {
+        var result = new System.Windows.Controls.ContextMenu { Placement = PlacementMode.MousePoint };
+        result.Items.Add(Item("Open link…", SymbolRegular.Open24, openLink));
+        result.Items.Add(Item("Settings", SymbolRegular.Settings24, openSettings));
+        result.Items.Add(Item("Diagnose hovered link…", SymbolRegular.Stethoscope24, diagnose));
+        var pause = new MenuItem { Header = "Pause hover", IsCheckable = true };
+        pause.Click += (_, _) => pauseChanged(pause.IsChecked);
+        result.Items.Add(pause);
+        result.Items.Add(new System.Windows.Controls.Separator());
+        result.Items.Add(Item("About LinkPeek", SymbolRegular.Info24, about));
+        result.Items.Add(Item("Quit", SymbolRegular.Power24, quit));
+        return result;
+    }
+
+    private static MenuItem Item(string text, SymbolRegular symbol, Action action)
+    {
+        var item = new MenuItem { Header = text, Icon = new SymbolIcon { Symbol = symbol } };
+        item.Click += (_, _) => action();
+        return item;
+    }
+
+    private void ShowMenu()
+    {
+        CloseCard(); gate.Reset(); App.FollowSystemTheme();
+        menuHost.Show(); menuHost.Activate();
+        menu.IsOpen = true;
+    }
 
     private void ReloadClient()
     {
@@ -74,37 +105,37 @@ internal sealed class TrayApplication : ApplicationContext
         catch { /* QR works without credentials. PR card directs users to Settings. */ }
     }
 
-    private void OpenSettings()
+    private void OpenSettings(SettingsPage page = SettingsPage.General)
     {
-        CloseCard(); gate.Reset();
-        if (settings is { IsDisposed: false }) { settings.Activate(); return; }
-        settings = new SettingsForm(preferences, ReloadClient); settings.Show();
+        CloseCard(); gate.Reset(); App.FollowSystemTheme();
+        if (settings is { IsLoaded: true })
+        {
+            settings.ShowPage(page);
+            if (settings.WindowState == System.Windows.WindowState.Minimized) settings.WindowState = System.Windows.WindowState.Normal;
+            settings.Activate(); return;
+        }
+        var opened = new SettingsWindow(preferences, ReloadClient);
+        settings = opened;
+        opened.Closed += (_, _) => { if (settings == opened) settings = null; };
+        opened.Show(); opened.ShowPage(page); opened.Activate();
     }
 
     private void OpenLink()
     {
-        CloseCard(); gate.Reset();
-        using var dialog = new ModernForm { Text = "LinkPeek · Open link", ClientSize = new Size(540, 170),
-            AutoScaleDimensions = new SizeF(96, 96), AutoScaleMode = AutoScaleMode.Dpi,
-            StartPosition = FormStartPosition.CenterScreen, Font = new Font("Segoe UI", 10),
-            FormBorderStyle = FormBorderStyle.FixedDialog, MinimizeBox = false, MaximizeBox = false };
-        var label = UI.Label("Paste a complete HTTP or HTTPS URL", 11, bold: true); label.Location = new Point(24, 20);
-        var input = new TextBox { Location = new Point(24, 57), Width = 490,
-            BackColor = Palette.Current.Surface, ForeColor = Palette.Current.Text };
-        var open = UI.Button("Open link", () => { }, true); open.Location = new Point(399, 110); open.DialogResult = DialogResult.OK;
-        dialog.Controls.AddRange([label, input, open]); dialog.AcceptButton = open;
-        if (dialog.ShowDialog() != DialogResult.OK) return;
-        if (WebLink.Parse(input.Text.Trim()) is not { } link)
-        { MessageBox.Show("Enter a complete HTTP or HTTPS URL without embedded credentials.", "LinkPeek"); return; }
-        ShowCard(link, Rectangle.Empty, Cursor.Position, true);
+        CloseCard(); gate.Reset(); App.FollowSystemTheme();
+        var dialog = new OpenLinkWindow();
+        if (dialog.ShowDialog() == true && dialog.Link is { } link)
+            ShowCard(link, Rectangle.Empty, WinForms.Cursor.Position, true);
     }
 
     private async Task DiagnoseHoverAsync()
     {
         if (diagnosing) return;
-        MessageBox.Show("After clicking OK, place the pointer over the problem link and keep it still.\n\n" +
-            "LinkPeek will inspect it after 3 seconds. The report contains only accessibility roles, process relationships and URL-presence flags. No chat text, URL values or credentials are recorded.",
-            "Diagnose hovered link", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        App.FollowSystemTheme();
+        if (!DialogWindow.Confirm(null, "Diagnose hovered link",
+                "After you select Start, place the pointer over the problem link and keep it still. LinkPeek inspects it after 3 seconds.\n\n" +
+                "The report contains only accessibility roles, process relationships and URL-presence flags. No chat text, URL values or credentials are recorded.",
+                "Start", "Cancel", primaryIsDefault: true)) return;
         diagnosing = true; CloseCard(); gate.Reset();
         var report = "";
         try
@@ -115,9 +146,9 @@ internal sealed class TrayApplication : ApplicationContext
                 report = "An existing accessibility request has not returned. Restart LinkPeek and try Diagnose again.\nThe provider may be stalled; no additional worker was started.";
             else
             {
-                var lines = new List<string> { $"LinkPeek Windows {SettingsForm.AppVersion}",
+                var lines = new List<string> { $"LinkPeek Windows {SettingsWindow.AppVersion}",
                     $"Windows: {Environment.OSVersion.Version}", "No URL values, labels or chat contents are included.", "" };
-                var point = Cursor.Position; var window = Native.GetForegroundWindow();
+                var point = WinForms.Cursor.Position; var window = Native.GetForegroundWindow();
                 Native.GetWindowThreadProcessId(window, out var pid);
                 inspectedPoint = point; inspectedProcess = pid;
                 inspection = Task.Run(() => LinkInspector.Inspect(point, pid, window, lines.Add));
@@ -128,7 +159,9 @@ internal sealed class TrayApplication : ApplicationContext
         }
         catch { report = "Accessibility inspection failed. No content was recorded."; }
         finally { diagnosing = false; }
-        new DiagnosticForm(report).Show();
+        App.FollowSystemTheme();
+        var diagnostics = new DiagnosticWindow(report);
+        diagnostics.Show(); diagnostics.Activate();
     }
 
     private void CloseCard()
@@ -139,12 +172,12 @@ internal sealed class TrayApplication : ApplicationContext
     private void ShowCard(WebLink link, Rectangle bounds, Point point, bool manual)
     {
         CloseCard(); anchor = bounds; anchorProcess = Native.ForegroundProcess(); outsideSince = TimeSpan.Zero;
-        captureUntil = TimeSpan.Zero;
-        var current = new CardForm(link, client, approvals, preferences with { }, manual,
+        captureUntil = TimeSpan.Zero; App.FollowSystemTheme();
+        var current = new CardWindow(link, client, approvals, preferences with { }, manual,
             () => suppressed = link.Text,
-            () => tray.ShowBalloonTip(3000, "LinkPeek", "Azure DevOps verified your approval.", ToolTipIcon.Info));
+            () => tray.ShowBalloonTip(3000, "LinkPeek", "Azure DevOps verified your approval.", WinForms.ToolTipIcon.Info));
         card = current;
-        current.FormClosed += (_, _) => { if (card == current) { card = null; gate.Reset(); } };
+        current.Closed += (_, _) => { if (card == current) { card = null; gate.Reset(); } };
         current.Place(bounds, point); current.Show();
     }
 
@@ -155,13 +188,13 @@ internal sealed class TrayApplication : ApplicationContext
         var snip = (Native.KeyDown(0x5B) || Native.KeyDown(0x5C)) && Native.KeyDown(0x10) && Native.KeyDown(0x53);
         if (snip && !snipKeyWasDown && card is not null) captureUntil = clock.Elapsed + TimeSpan.FromSeconds(20);
         snipKeyWasDown = snip;
-        if (paused || diagnosing || settings is { IsDisposed: false, Visible: true }) return;
-        var point = Cursor.Position;
+        if (paused || diagnosing || menu.IsOpen || settings is { IsVisible: true }) return;
+        var point = WinForms.Cursor.Position;
         var foreground = Native.ForegroundProcess();
-        if (card is { IsDisposed: false })
+        if (card is { IsClosed: false })
         {
             if (card.Manual || card.Busy || clock.Elapsed < captureUntil) return;
-            if (card.Bounds.Contains(point) || (anchor.Contains(point) && foreground == anchorProcess))
+            if (card.ScreenBounds.Contains(point) || (anchor.Contains(point) && foreground == anchorProcess))
             { outsideSince = TimeSpan.Zero; return; }
             if (outsideSince == TimeSpan.Zero) outsideSince = clock.Elapsed;
             if (clock.Elapsed - outsideSince < TimeSpan.FromMilliseconds(650)) return;
@@ -191,10 +224,16 @@ internal sealed class TrayApplication : ApplicationContext
         }
     }
 
-    protected override void ExitThreadCore()
+    private void Quit()
     {
-        timer.Stop(); timer.Dispose(); CloseCard(); settings?.Close();
+        Dispose();
+        app.Shutdown();
+    }
+
+    public void Dispose()
+    {
+        if (!timer.IsEnabled && !tray.Visible) return;
+        timer.Stop(); CloseCard(); settings?.Close(); menuHost.Close();
         approvals?.Invalidate(); client?.Dispose(); tray.Visible = false; tray.Dispose(); icon.Dispose();
-        base.ExitThreadCore();
     }
 }

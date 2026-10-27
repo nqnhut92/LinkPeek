@@ -6,6 +6,16 @@ This Windows version is not final. Iteration builds keep version 0.1.1; use the 
 
 ### Current iteration
 
+- Rebuild the Windows interface on WPF and WPF UI 4.3.0 (Fluent Design) instead of custom-drawn WinForms controls: Mica Settings window with `NavigationView` and settings cards, Fluent toggle switches, slider, text and password inputs, `InfoBar` status messages, Fluent System Icons, a Fluent tray context menu, and ContentDialog-style dialogs for Open link, diagnostics, approval and PAT removal.
+- Redesign the hover card as a Fluent flyout with a vector QR code, icon detail rows and inline warnings/errors. Positioning, focus behavior (hover cards never activate), dwell, suppression and the approval flow are unchanged.
+- Settings apply immediately; the organization is saved when leaving its field. Removing a PAT now asks for confirmation.
+- Show the saved-PAT state like the macOS app: eight fixed placeholder-colored dots when a credential exists and the input is empty. Only credential existence is checked; the token is never read for display, its length is not revealed and the dots are not inserted into the input.
+- Follow Windows light/dark/high-contrast and accent changes while windows are open. Declare per-monitor V2 DPI awareness for the WPF UI.
+- CI renders light/dark previews of every window at 100%, 150% and 200%, fails on clipped text or controls outside their window, and verifies saved-PAT mask alignment, tone and behavior.
+- Hover detection (UI Automation/MSAA), QR generation and Azure DevOps logic are unchanged. Users confirmed hover works across apps, including Teams desktop.
+
+#### Earlier in this iteration
+
 - Refresh the hover popup and Settings with a Windows 11 style: lighter visual hierarchy, rounded accent actions, sidebar navigation, and light/dark palettes. Use native rounded outer-window corners on Windows 11 and high-contrast system colors when enabled.
 - Scope hyperlink detection to the foreground native root window rather than requiring UIA renderer elements to share the host process ID. This supports hosted-renderer layouts used by desktop apps such as Teams; actual Teams desktop behavior still needs user retesting.
 - Prioritize hyperlink ancestors of hit text nodes and inspect MSAA ancestors instead of only the exact hit child.

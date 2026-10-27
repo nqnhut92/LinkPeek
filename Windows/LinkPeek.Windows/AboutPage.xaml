@@ -1,0 +1,92 @@
+<UserControl
+    x:Class="LinkPeek.Windows.AboutPage"
+    x:ClassModifier="internal"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <ui:DynamicScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Style="{StaticResource SettingsPageStyle}">
+            <ui:TextBlock FontTypography="Title" Text="About" />
+
+            <ui:Card Margin="0,24,0,4" Padding="24">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Image
+                        x:Name="Logo"
+                        Width="72"
+                        Height="72"
+                        Margin="0,0,20,0"
+                        VerticalAlignment="Top"
+                        RenderOptions.BitmapScalingMode="HighQuality" />
+                    <StackPanel Grid.Column="1">
+                        <ui:TextBlock FontTypography="Subtitle" Text="LinkPeek" />
+                        <ui:TextBlock
+                            x:Name="VersionText"
+                            Margin="0,2,0,0"
+                            Style="{StaticResource SecondaryTextStyle}" />
+                        <ui:TextBlock
+                            Margin="0,12,0,0"
+                            Text="Turn web links into shareable QR codes. Preview and approve Azure DevOps pull requests without losing your place."
+                            TextWrapping="Wrap" />
+                        <WrapPanel Margin="-8,12,0,0">
+                            <ui:HyperlinkButton
+                                x:Name="Repository"
+                                Content="GitHub repository"
+                                NavigateUri="https://github.com/nqnhut92/LinkPeek">
+                                <ui:HyperlinkButton.Icon>
+                                    <ui:SymbolIcon Symbol="Open24" />
+                                </ui:HyperlinkButton.Icon>
+                            </ui:HyperlinkButton>
+                            <ui:Button
+                                x:Name="License"
+                                Margin="8,0,0,0"
+                                Appearance="Transparent"
+                                Content="MIT License">
+                                <ui:Button.Icon>
+                                    <ui:SymbolIcon Symbol="DocumentText24" />
+                                </ui:Button.Icon>
+                            </ui:Button>
+                            <ui:Button
+                                x:Name="Notices"
+                                Margin="8,0,0,0"
+                                Appearance="Transparent"
+                                Content="Third-party notices">
+                                <ui:Button.Icon>
+                                    <ui:SymbolIcon Symbol="TextBulletListSquare24" />
+                                </ui:Button.Icon>
+                            </ui:Button>
+                        </WrapPanel>
+                    </StackPanel>
+                </Grid>
+            </ui:Card>
+
+            <ui:TextBlock Style="{StaticResource SettingsSectionStyle}" Text="Privacy" />
+            <ui:CardControl Style="{StaticResource SettingsCardStyle}">
+                <ui:CardControl.Icon>
+                    <ui:SymbolIcon Symbol="LockClosed24" />
+                </ui:CardControl.Icon>
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="On-device by default" />
+                        <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="QR codes are generated locally. Only pull request previews contact dev.azure.com, over HTTPS with your saved PAT." />
+                    </StackPanel>
+                </ui:CardControl.Header>
+            </ui:CardControl>
+            <ui:CardControl Style="{StaticResource SettingsCardStyle}">
+                <ui:CardControl.Icon>
+                    <ui:SymbolIcon Symbol="Accessibility24" />
+                </ui:CardControl.Icon>
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="Link detection" />
+                        <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="Uses each app's UI Automation and MSAA hyperlink information. No screen pixels or message text are read. Use Open link… from the tray icon when an app does not expose a link." />
+                    </StackPanel>
+                </ui:CardControl.Header>
+            </ui:CardControl>
+        </StackPanel>
+    </ui:DynamicScrollViewer>
+</UserControl>

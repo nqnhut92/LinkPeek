@@ -1,0 +1,144 @@
+<UserControl
+    x:Class="LinkPeek.Windows.AzureDevOpsPage"
+    x:ClassModifier="internal"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:LinkPeek.Windows"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <ui:DynamicScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Style="{StaticResource SettingsPageStyle}">
+            <ui:TextBlock FontTypography="Title" Text="Azure DevOps" />
+            <ui:TextBlock
+                Margin="0,4,0,0"
+                Style="{StaticResource SecondaryTextStyle}"
+                Text="Preview and approve pull requests right where you hover. QR codes work without an account." />
+
+            <ui:InfoBar
+                x:Name="Status"
+                Margin="0,20,0,0"
+                IsClosable="True"
+                IsOpen="False" />
+
+            <ui:TextBlock Style="{StaticResource SettingsSectionStyle}" Text="Connection" />
+            <ui:CardControl Style="{StaticResource SettingsCardStyle}">
+                <ui:CardControl.Icon>
+                    <ui:SymbolIcon Symbol="Organization24" />
+                </ui:CardControl.Icon>
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="Organization" />
+                        <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="The name after dev.azure.com/ in your pull request links. Saved when you leave the field." />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:TextBox
+                    x:Name="Organization"
+                    Width="280"
+                    AutomationProperties.Name="Organization name"
+                    ClearButtonEnabled="False"
+                    PlaceholderText="contoso" />
+            </ui:CardControl>
+            <ui:CardControl Style="{StaticResource SettingsCardStyle}">
+                <ui:CardControl.Icon>
+                    <ui:SymbolIcon Symbol="Key24" />
+                </ui:CardControl.Icon>
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="Personal access token" />
+                        <ui:TextBlock
+                            x:Name="TokenHint"
+                            Style="{StaticResource SettingsDescriptionStyle}"
+                            Text="Use Code (Read &amp; Write) scope to approve. Stored only in Windows Credential Manager." />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <Grid Width="280">
+                    <PasswordBox
+                        x:Name="Token"
+                        AutomationProperties.Name="Personal access token"
+                        PasswordChar="●" />
+                    <local:SavedSecretMask x:Name="SavedMask" Target="{Binding ElementName=Token}" />
+                </Grid>
+            </ui:CardControl>
+            <ui:CardControl Style="{StaticResource SettingsCardStyle}">
+                <ui:CardControl.Icon>
+                    <ui:SymbolIcon x:Name="CredentialIcon" Symbol="LockShield24" />
+                </ui:CardControl.Icon>
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock x:Name="CredentialTitle" Text="No PAT saved" />
+                        <ui:TextBlock
+                            x:Name="CredentialDetail"
+                            Style="{StaticResource SettingsDescriptionStyle}"
+                            Text="Enter a PAT, then save it for this organization." />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <WrapPanel HorizontalAlignment="Right">
+                    <ui:Button
+                        x:Name="SaveToken"
+                        Margin="8,4,0,4"
+                        Appearance="Primary"
+                        Content="Save PAT">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="Save24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+                    <ui:Button
+                        x:Name="TestConnection"
+                        Margin="8,4,0,4"
+                        Content="Test connection">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="PlugConnected24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+                    <ui:Button
+                        x:Name="RemoveToken"
+                        Margin="8,4,0,4"
+                        Content="Remove">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="Delete24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+                </WrapPanel>
+            </ui:CardControl>
+
+            <ui:TextBlock Style="{StaticResource SettingsSectionStyle}" Text="Approval" />
+            <ui:CardControl Style="{StaticResource SettingsCardStyle}">
+                <ui:CardControl.Icon>
+                    <ui:SymbolIcon Symbol="ShieldCheckmark24" />
+                </ui:CardControl.Icon>
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="Skip approval confirmation" />
+                        <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="Approve submits your vote right after LinkPeek re-verifies the commit. Off is safer." />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:ToggleSwitch
+                    x:Name="Skip"
+                    AutomationProperties.Name="Skip approval confirmation"
+                    OffContent="Off"
+                    OnContent="On" />
+            </ui:CardControl>
+            <ui:CardControl Style="{StaticResource SettingsCardStyle}">
+                <ui:CardControl.Icon>
+                    <ui:SymbolIcon Symbol="AlertOn24" />
+                </ui:CardControl.Icon>
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="Success notification" />
+                        <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="Show a Windows notification after Azure DevOps confirms your vote." />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:ToggleSwitch
+                    x:Name="Notify"
+                    AutomationProperties.Name="Success notification"
+                    OffContent="Off"
+                    OnContent="On" />
+            </ui:CardControl>
+            <ui:TextBlock
+                Margin="1,16,0,0"
+                FontTypography="Caption"
+                Style="{StaticResource SecondaryTextStyle}"
+                Text="Hovering never casts a vote. Test connection only verifies your identity. LinkPeek never shows or logs a saved PAT." />
+        </StackPanel>
+    </ui:DynamicScrollViewer>
+</UserControl>

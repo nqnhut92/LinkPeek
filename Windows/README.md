@@ -2,13 +2,29 @@
 
 Native Windows port of LinkPeek: a tray utility that previews web links as offline QR codes or Azure DevOps pull requests. The existing Swift/macOS application remains in the repository root; Windows code lives here.
 
-Targets Windows 10 22H2 / Windows 11, x64 or ARM64. Development requires the .NET 10 SDK. The published portable app includes its runtime and runs as the current user, without administrator privileges or a separate .NET installation. The initial build was reported to work in other apps and Teams web, but not Teams desktop. Windows 0.1.1 is still being finalized: the current build updates hosted-renderer detection and the interface; **actual desktop Teams compatibility and the refreshed UI still need user validation**. See the acceptance checklist below and [Windows changes](CHANGELOG.md).
+Targets Windows 10 22H2 / Windows 11, x64 or ARM64. Development requires the .NET 10 SDK. The published portable app includes its runtime and runs as the current user, without administrator privileges or a separate .NET installation. Users have confirmed that hover detection works across their apps, including Teams desktop. Windows 0.1.1 is still being finalized: the current iteration rebuilds the interface on Fluent controls, and **the new UI still needs user validation on a real desktop**. See the acceptance checklist below and [Windows changes](CHANGELOG.md).
 
 ## Interface
 
-The Windows interface uses a compact borderless hover card, Segoe UI typography, accent actions, rounded controls, and a sidebar with General, Azure DevOps and About pages. Windows 11 supplies rounded outer-window corners and native dark title bars where supported. Windows 10 keeps the same control layout with the older system window frame. High contrast uses Windows system colors. The app's light/dark preference is read when a window opens; close and reopen Settings or the card after changing the Windows app theme.
+The Windows UI is built with WPF and [WPF UI](https://github.com/lepoco/wpfui) 4.3.0, a Fluent Design toolkit that implements WinUI controls for WPF. It follows the patterns of Windows 11 Settings, PowerToys Settings and WinUI Gallery rather than drawing custom controls:
 
-Windows CI renders ten PNG previews of the three Settings pages, QR card and PR card in light/dark themes. Download **LinkPeek-UI-previews** from a successful Actions run to review them. These are drawn from synthetic controls and data; the preview renderer does not take a screenshot of the user's desktop or read saved credentials.
+- **Settings** is a Mica window with a Fluent title bar and a left `NavigationView` (General, Azure DevOps, About). Each option is a settings card (`CardControl`) with an icon, title, description and a Fluent `ToggleSwitch`, `Slider`, `TextBox` or `PasswordBox`. Changes apply immediately, like Windows Settings; there is no separate Save button. The organization is saved when you leave its field. Status and errors appear in an `InfoBar` at the top of the page.
+- **Hover card** is a borderless Fluent flyout-style window (rounded corners and DWM shadow on Windows 11) with Fluent System Icons, a vector QR code that stays sharp at any scale, an `InfoBar` for warnings and errors, and accent/standard Fluent buttons. Hover cards never take focus.
+- **Tray menu**, **Open link…**, **Link diagnostics**, approval confirmation and PAT removal use Fluent context menus and ContentDialog-style windows. Approve and Remove default to the safe **Cancel** button.
+- Typography is Segoe UI Variable / Segoe UI through the WPF UI type ramp. Colors come from the Windows light, dark and high-contrast theme resources and the system accent color; open windows follow a Windows theme change.
+- The process is per-monitor DPI aware (V2). WPF lays out in device-independent pixels and re-rasterizes on each display, so the same layout is used at 100%, 150% and 200%.
+
+Windows 10 has no Mica; the same layout uses a solid theme background there.
+
+### Saved PAT state
+
+When a PAT exists in Windows Credential Manager for the organization being edited and the PAT input is empty, the field shows **eight dots in the placeholder color**, matching the macOS `PATSecureField`. LinkPeek only checks that the credential exists; it never reads the token to draw this, the dot count is always eight and does not reveal the token's length, and the dots are drawn over the field rather than placed in the input. The `PasswordBox` stays empty and the drawing has no UI Automation element. Typing a new PAT hides the dots immediately; **Save PAT** replaces the stored token. The credential card next to the field also says "PAT saved", and screen readers get the same information through the field's help text.
+
+### UI previews
+
+The **desktop-checks** CI job renders synthetic previews: Settings (each page, the saved-PAT state and the minimum window size), the QR card, pull-request cards (normal, confirmation off, not configured), Open link with a validation error, Link diagnostics, the approval dialog and the tray menu. Each is rendered in light and dark themes at 100%, 150% and 200% scale. Download **LinkPeek-UI-previews** from a successful Actions run; files are in `light/` and `dark/`, named `<view>@<scale>.png`. Previews use a solid background in place of Mica and approximate the Windows 11 frame; they are not screenshots of the user's desktop and never read saved credentials.
+
+The same job fails if any text in these views is clipped or any control lies outside its window, and it checks the saved-PAT state: the mask must line up with eight typed glyphs, use a lighter placeholder tone, leave the input empty, have no automation peer and disappear when typing starts (`pat-mask-check.txt`, plus `pat-saved-mask@200.png` and `pat-typed-reference@200.png` in each theme folder).
 
 ## Build or package
 
@@ -55,12 +71,12 @@ The cross-publish command creates an application folder. Use `publish.ps1` (Powe
 
 1. Run the app. Right-click the LinkPeek tray icon (it may be under hidden icons).
 2. Hover a link for 500 ms. Move onto the card to use it. It closes after leaving for 650 ms; Escape dismisses it. Copy Link and Copy QR close the card and suppress reopening until you leave the link. Win+Shift+S holds the card for up to 20 seconds; Escape ends the hold.
-3. **Settings** controls the delay (300–1000 ms), optional Alt + hover, and launch at sign-in. Sign-in registration uses only the current user's Run key, may be restricted by company policy, and refers to the current executable path. Re-save after moving the app. **Pause hover** temporarily stops detection.
+3. **Settings** controls the delay (300–1000 ms), optional Alt + hover, and launch at sign-in. Sign-in registration uses only the current user's Run key, may be restricted by company policy, and refers to the current executable path. After moving the app, turn the option off and on again. **Pause hover** temporarily stops detection.
 4. **Open link…** accepts an explicitly pasted URL when an app does not expose its target. It does not read the clipboard automatically. That card stays open until closed or copied.
 
 Generic web links need no account or network. QR generation preserves the full original URL including query and fragment. Links with embedded credentials and non-HTTP(S) schemes are rejected. Redirect URLs are encoded as exposed, not followed or unwrapped.
 
-For Azure DevOps, enter an organization name and PAT in Settings; use **Save PAT**, then **Test connection**. PATs are stored per organization in Windows Credential Manager, never in `settings.json`, logs, or a saved setup script. PAT inputs are masked and saved tokens are never displayed. Test connection only verifies authenticated identity; it never votes. Use Code (Read & Write) scope for approval. **Remove PAT** deletes that organization's saved credential. Non-secret preferences are in `%LOCALAPPDATA%\LinkPeek\settings.json`.
+For Azure DevOps, enter an organization name and PAT in Settings; use **Save PAT**, then **Test connection**. PATs are stored per organization in Windows Credential Manager, never in `settings.json`, logs, or a saved setup script. PAT inputs are masked and saved tokens are never displayed; a saved PAT is indicated only by eight fixed placeholder dots (see [Saved PAT state](#saved-pat-state)). Test connection only verifies authenticated identity; it never votes. Use Code (Read & Write) scope for approval. **Remove** (after confirmation) deletes that organization's saved credential. Non-secret preferences are in `%LOCALAPPDATA%\LinkPeek\settings.json`.
 
 PR previews show title, author, branches, lifecycle and your vote. Confirmation is on by default. Explicitly opting out changes the button to **Approve immediately** and shows a warning. Preparing and confirming approval revalidate the reviewer, eligible lifecycle and commit. Each confirmation is one-use and expires after two minutes. The app sends at most one vote request, then reads back the server's vote and commit before reporting success. Ambiguous outcomes require a refresh and are never automatically retried. Azure DevOps does not offer an atomic head-SHA precondition for votes, so a server-side commit race remains possible. Approved, completed, abandoned, draft and unknown-vote states are non-actionable. The app remembers verified approved heads only for the current session and displays a new-commits warning when they change. Each new hover fetches fresh state; continuous hover does not poll.
 
@@ -75,7 +91,7 @@ Inspection runs on one MTA worker away from the UI thread with a soft 350 ms UIA
 ### Diagnose desktop Teams or another unsupported app
 
 1. Right-click the tray icon and choose **Diagnose hovered link…**.
-2. Read the notice, click OK, then move onto the problem link within three seconds. Keep the source app foreground and the pointer still.
+2. Read the notice, select **Start**, then move onto the problem link within three seconds. Keep the source app foreground and the pointer still.
 3. A report opens with roles, PID relationships, node sizes, whether candidate fields contain complete URLs, and the resolution path or timeout. It does **not** contain URL values, friendly link labels, chat content, PATs or account details. Nothing is uploaded or saved automatically.
 4. Use **Copy report** if you choose to share that diagnostic text. If a provider is stalled, restart LinkPeek before another attempt. The diagnostic path shares the single-worker limit.
 
@@ -89,7 +105,7 @@ From `Windows/` on a Windows development machine:
 dotnet run --project LinkPeek.DesktopChecks/LinkPeek.DesktopChecks.csproj -c Release -- artifacts/ui-previews
 ```
 
-The harness starts a synthetic host window and a distinct child-renderer process, then checks that a hyperlink resolves through the host while plain URL text and a foreign root window are rejected. It also renders the ten light/dark UI previews. The synthetic fixture is not Teams and does not establish real Teams behavior. The harness requires a Windows desktop session, and its checks cannot run in Linux.
+The harness starts a synthetic host window and a distinct child-renderer process, then checks that a hyperlink resolves through the host while plain URL text and a foreign root window are rejected. It also renders the light/dark UI previews at three scales, runs the layout audit and checks the saved-PAT state. The synthetic fixture is not Teams and does not establish real Teams behavior. The harness requires a Windows desktop session, and its checks cannot run in Linux.
 
 For only the synthetic appearance previews, the Windows app also accepts `LinkPeek.exe --render-ui <output-folder>`; this mode does not start the tray workflow, mutate preferences/startup settings, access PATs or call Azure DevOps.
 
@@ -100,12 +116,12 @@ Core tests and cross-compilation do not validate actual desktop behavior. Before
 - Launch a portable package without admin/.NET installed; verify one tray instance, Pause, Quit, and first-run Settings.
 - In each target app (including Teams, Edge/Chrome, Outlook and other daily tools), test raw URLs and friendly links. Record app/version and whether the target is exposed. Unsupported links must produce no guessed QR or PR. Confirm manual entry works.
 - Test dwell, Alt mode, transfer from anchor to card, Escape, copy/reopen suppression, QR scanning including Unicode/query/fragment, clipboard contention, and Win+Shift+S hold.
-- Test multiple displays, negative screen coordinates, 100%/150%/200% scaling and display changes. Ensure the card remains reachable and does not cover its anchor. Test system/high-contrast appearance and keyboard access through manual entry.
-- Save/reopen/remove PAT; check Credential Manager and ensure settings JSON contains no token. Test connection failure, wrong organization and offline behavior without submitting votes.
+- Test multiple displays, negative screen coordinates, 100%/150%/200% scaling and display changes. Ensure the card remains reachable and does not cover its anchor. Test light, dark and high-contrast themes (including switching while Settings is open), Mica on Windows 11, Windows 10 appearance, Narrator, and keyboard navigation through Settings, dialogs and manual entry.
+- Save/reopen/remove PAT; check Credential Manager and ensure settings JSON contains no token. With a saved PAT, the empty field shows eight placeholder-colored dots; typing hides them; another organization without a PAT shows an empty field. Test connection failure, wrong organization and offline behavior without submitting votes.
 - On a disposable PR only, explicitly test confirmation/cancel, changed commit, inactive/draft/already-approved states, one vote per click, and server readback. Do not use a real work PR for smoke tests.
 - Test launch at sign-in, move the folder and re-register, and confirm a policy-denied registration gives a visible error.
 
-Windows 11 appearance, accessibility-provider compatibility, native clipboard/credential integration, screenshot behavior and sign-in registration remain manual validation requirements. This port does not migrate macOS Keychain contents or preferences, implement macOS visual effects, or provide an installer/code-signing identity.
+Windows 11 appearance, accessibility-provider compatibility, native clipboard/credential integration, screenshot behavior and sign-in registration remain manual validation requirements. This port does not migrate macOS Keychain contents or preferences, imitate macOS visual effects, or provide an installer/code-signing identity.
 
 ## Troubleshooting and removal
 
