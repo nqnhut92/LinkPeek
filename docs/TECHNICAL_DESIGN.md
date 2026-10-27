@@ -1,5 +1,7 @@
 # LinkPeek technical design
 
+This document describes the macOS implementation. The native Windows implementation, platform limitations and acceptance checklist are documented in [Windows/README.md](../Windows/README.md). Both implementations share the LinkPeek product and repository; [RELEASING.md](RELEASING.md) explains independent builds and combined release assets.
+
 ## Application and build
 
 LinkPeek is an accessory macOS app with a link symbol in the menu bar. Opening Settings waits for the status menu's close callback to finish before requesting presentation. It temporarily uses regular activation policy and orders the window front before requesting activation. If already active, it makes Settings key immediately; otherwise the activation notification restores key/main status. An attached sheet retains key focus. Dock reopen requests show Settings again. Closing Settings returns to accessory mode.

@@ -1,0 +1,77 @@
+name: Windows
+
+on:
+  push:
+    paths: ['Windows/**', 'Resources/AppIcon.png', 'LICENSE', '.github/workflows/windows.yml']
+  pull_request:
+    paths: ['Windows/**', 'Resources/AppIcon.png', 'LICENSE', '.github/workflows/windows.yml']
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Optional EXISTING release tag to attach Windows ZIPs (e.g. v0.1.1). Blank = build artifacts only.'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        runtime: [win-x64, win-arm64]
+    defaults:
+      run:
+        working-directory: Windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Test and package portable app
+        shell: pwsh
+        run: ./publish.ps1 -Runtime '${{ matrix.runtime }}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LinkPeek-Windows-${{ matrix.runtime }}
+          path: |
+            Windows/artifacts/LinkPeek-Windows-*-${{ matrix.runtime }}.zip
+            Windows/artifacts/LinkPeek-Windows-*-${{ matrix.runtime }}.zip.sha256
+          if-no-files-found: error
+
+  attach-to-release:
+    if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+    needs: build
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: LinkPeek-Windows-win-*
+          path: release-assets
+          merge-multiple: true
+      - name: Attach Windows packages to the selected existing release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:RELEASE_TAG) -or $env:RELEASE_TAG.StartsWith('-')) {
+            throw 'Enter an existing release tag, such as v0.1.1.'
+          }
+          $json = gh release view $env:RELEASE_TAG --json assets
+          if ($LASTEXITCODE -ne 0) { throw 'Release not found or not accessible. Create it in Releases first.' }
+          $existing = @((ConvertFrom-Json ($json -join "`n")).assets | ForEach-Object { $_.name })
+          $files = @(Get-ChildItem release-assets -File | Where-Object { $_.Name -match '^LinkPeek-Windows-.*\.zip(\.sha256)?$' })
+          if ($files.Count -ne 4) { throw 'Expected two Windows ZIPs and their two SHA-256 files.' }
+          foreach ($file in $files) {
+            if ($existing -contains $file.Name) { throw "Asset already exists: $($file.Name). No assets were replaced. Use a new Windows version or remove only the intended Windows assets in Releases before retrying." }
+          }
+          gh release upload $env:RELEASE_TAG @($files.FullName)
+          if ($LASTEXITCODE -ne 0) { throw 'Release upload failed. Check the release assets before retrying.' }
+          Write-Output 'Windows packages attached. Existing macOS assets and release notes were preserved.'

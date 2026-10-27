@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>LinkPeek.ico</ApplicationIcon>
+    <Version>0.1.1</Version>
+    <AssemblyName>LinkPeek</AssemblyName>
+    <RootNamespace>LinkPeek.Windows</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../LinkPeek.Core/LinkPeek.Core.csproj" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+    <Content Include="../../LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../README.md" Link="README-Windows.md" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="../../Resources/AppIcon.png" Link="AppIcon.png" />
+  </ItemGroup>
+  <Target Name="RetainRuntimeLicenses" AfterTargets="Publish" Condition="'$(SelfContained)' == 'true'">
+    <ItemGroup>
+      <RuntimeLicense Include="%(ResolvedRuntimePack.PackageDirectory)/LICENSE.TXT" Condition="'%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.NETCore.App'" />
+      <RuntimeNotices Include="%(ResolvedRuntimePack.PackageDirectory)/THIRD-PARTY-NOTICES.TXT" Condition="'%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.NETCore.App'" />
+      <DesktopLicense Include="%(ResolvedRuntimePack.PackageDirectory)/LICENSE" Condition="'%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.WindowsDesktop.App'" />
+    </ItemGroup>
+    <Copy SourceFiles="@(RuntimeLicense)" DestinationFiles="$(PublishDir)DOTNET-LICENSE.txt" Condition="Exists('%(RuntimeLicense.Identity)')" />
+    <Copy SourceFiles="@(RuntimeNotices)" DestinationFiles="$(PublishDir)DOTNET-THIRD-PARTY-NOTICES.txt" Condition="Exists('%(RuntimeNotices.Identity)')" />
+    <Copy SourceFiles="@(DesktopLicense)" DestinationFiles="$(PublishDir)WINDOWS-DESKTOP-LICENSE.txt" Condition="Exists('%(DesktopLicense.Identity)')" />
+  </Target>
+</Project>
