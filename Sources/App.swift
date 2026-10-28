@@ -34,7 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSPo
   private let inspector = Inspector()
   private let logger = Logger(subsystem: "com.linkpeek.app", category: "Hover")
   private var targetLink: HoverLink?
-  private var current: PRLink? { targetLink?.pullRequest }
+  private var current: PRLink? { preferences.prCardEnabled ? targetLink?.pullRequest : nil }
   private var showingQR = false
   private var qrImage: NSImage?
   private var qrStatus: String?
@@ -361,10 +361,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSPo
         }
         let enabled = !self.preferences.optionHover || NSEvent.modifierFlags.contains(.option)
         guard enabled else { return }
+        let showsPR = link.pullRequest != nil && self.preferences.prCardEnabled
+        guard showsPR || self.preferences.linkFilter.allowsQR(link.url) else {
+          if self.targetLink != nil { self.hide() }
+          self.gate.reset()
+          self.hoverTask?.cancel()
+          self.hoverTask = nil
+          return
+        }
         if self.targetLink != link {
           self.hide()
           self.targetLink = link
-          self.showingQR = link.pullRequest == nil
+          self.showingQR = !showsPR
         }
         self.anchor = frame
         self.lastSeen = Date()
@@ -407,7 +415,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSPo
       action = #selector(retryLoad)
     }
     let content = HoverCardView(
-      size: size, link: link.pullRequest, url: link.url, qrMode: showingQR, qrImage: qrImage,
+      size: size, link: showingQR ? nil : link.pullRequest, url: link.url, qrMode: showingQR,
+      qrImage: qrImage,
       qrStatus: qrStatus, copyAction: #selector(copyQR), copyLinkAction: #selector(copyLink),
       snapshot: displayedSnapshot, state: displayState,
       error: errorMessage, confirmation: confirmation, busy: actionBusy, target: self,

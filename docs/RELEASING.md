@@ -6,7 +6,7 @@ One repository contains two native implementations. Build and validate each plat
 
 | Platform | Package | Checksum | Version source |
 | --- | --- | --- | --- |
-| macOS | `LinkPeek-0.1.1.zip` | `LinkPeek-0.1.1.zip.sha256` | Xcode project marketing version |
+| macOS | `LinkPeek-0.2.0.zip` | `LinkPeek-0.2.0.zip.sha256` | Xcode project marketing version |
 | Windows x64 | `LinkPeek-Windows-0.1.1-win-x64.zip` | Same filename + `.sha256` | `Windows/LinkPeek.Windows/LinkPeek.Windows.csproj`, `Version` |
 | Windows ARM64 | `LinkPeek-Windows-0.1.1-win-arm64.zip` | Same filename + `.sha256` | Same Windows project |
 

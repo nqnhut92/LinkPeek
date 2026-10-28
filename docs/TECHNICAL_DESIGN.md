@@ -8,13 +8,13 @@ LinkPeek is an accessory macOS app with a link symbol in the menu bar. Opening S
 
 `LinkPeek.xcodeproj` builds the `LinkPeek` scheme, target, executable and `LinkPeek.app`. The Swift package and testable library module also use `LinkPeek`. The bundle identifier is `com.linkpeek.app`. The Xcode scheme has no test target; `swift test` exercises the package core and excludes the app/UI source.
 
-The project uses `PRODUCT_NAME = $(TARGET_NAME)`, marketing version `0.1.1`, and a build phase stamps the built bundle's `CFBundleVersion` with the local build time (`YYYYMMDD.HHMMSS`). About reads that bundle metadata and displays `Version 0.1.1 (build-YYYYMMDD.HHMMSS)`. The source build fallback remains `1`.
+The project uses `PRODUCT_NAME = $(TARGET_NAME)`, marketing version `0.2.0`, and a build phase stamps the built bundle's `CFBundleVersion` with the local build time (`YYYYMMDD.HHMMSS`). About reads that bundle metadata and displays `Version 0.2.0 (build-YYYYMMDD.HHMMSS)`. The source build fallback remains `1`.
 
 The approved icon is a petrol blue rounded square with two white chain links and a small preview card. It was generated and prepared with ImageGen. `Resources/AppIcon.png` is the 1024px master; `Assets.xcassets/AppIcon.appiconset` contains all ten macOS size/scale variants. No third-party brand logo is embedded.
 
 ## Settings
 
-Settings uses a sidebar and grouped cards with adaptive primary text, system blue actions/selection and system green switches. General contains launch at login, Accessibility, hover mode and dwell delay. Azure DevOps contains organization/PAT management, connection testing and approval options. About contains the app icon, bundle-backed version, feature summary and Quit. About links to `https://github.com/nqnhut92/LinkPeek` with GitHub and Quit capsule buttons.
+Settings uses a sidebar and grouped cards with adaptive primary text, system blue actions/selection and system green switches. General contains launch at login, Accessibility and hover timing (trigger and dwell delay). QR links contains the master QR switch, the built-in Grab links preset (`app.grab.com/s/*`), user glob patterns, an off-by-default switch for any other link and a link tester. Azure DevOps contains organization/PAT management, connection testing, the PR card switch and approval options. About contains the app icon, bundle-backed version, feature summary and Quit. About links to `https://github.com/nqnhut92/LinkPeek` with GitHub and Quit capsule buttons.
 
 Launch at login uses `SMAppService.mainApp` only when explicitly enabled. Settings reflects its status, offers Login Items approval when required, and reports sanitized errors. It does not register automatically.
 
@@ -30,7 +30,7 @@ Any foreground app is eligible, except LinkPeek itself. App name or bundle ident
 
 Candidates must expose complete HTTP/HTTPS URLs with no embedded credentials, contain the cursor and have bounded geometry. AXValue fallback requires AXLink. Existing scheme-less Teams normalization is limited to `dev.azure.com`. Message bodies are not scraped. Missing targets produce no card; actual URL exposure depends on the app. Debug diagnostics redact URL and message content.
 
-Pointer/PID checks discard stale results. Dwell identity includes the exact exposed URL, query and fragment. Default delay is 500ms, configurable from 300–1000ms. Option + Hover also requires holding Option. The existing 650ms exit grace allows entering the card. Generation tickets reject stale asynchronous PR responses. Each new PR dwell fetches fresh server state; continuous hover does not poll.
+The inspector sets `AXEnhancedUserInterface` (Chromium) and `AXManualAccessibility` (Electron) once per foreground process so browsers build their web accessibility tree; unsupported attributes are ignored. Pointer/PID checks discard stale results. Dwell identity includes the exact exposed URL, query and fragment. Default delay is 800ms, configurable from 500–1500ms; a one-time migration (`hoverPrefsVersion`) moves the old 500ms default to 800ms. Only Grab links and user patterns open QR cards unless any-other-link is enabled; `LinkFilter` decides, with case-insensitive `host/path` globs that ignore scheme, query and port. Option + Hover also requires holding Option. The existing 650ms exit grace allows entering the card. Generation tickets reject stale asynchronous PR responses. Each new PR dwell fetches fresh server state; continuous hover does not poll.
 
 ## Native cards and QR
 

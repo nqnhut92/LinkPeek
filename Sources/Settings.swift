@@ -11,6 +11,11 @@ final class Preferences: ObservableObject {
   @Published var delayMS: Double { didSet { persist() } }
   @Published var skipConfirmation: Bool { didSet { persist() } }
   @Published var successNotification: Bool { didSet { persist() } }
+  @Published var qrEnabled: Bool { didSet { persist() } }
+  @Published var grabEnabled: Bool { didSet { persist() } }
+  @Published var anyOtherLinkQR: Bool { didSet { persist() } }
+  @Published var customPatterns: [String] { didSet { persist() } }
+  @Published var prCardEnabled: Bool { didSet { persist() } }
   var changed: (() -> Void)?
   private let defaults: UserDefaults
   init(defaults: UserDefaults = .standard) {
@@ -24,10 +29,23 @@ final class Preferences: ObservableObject {
     }
     organization = defaults.string(forKey: "organization") ?? ""
     optionHover = defaults.bool(forKey: "optionHover")
-    let stored = defaults.double(forKey: "delayMS")
-    delayMS = stored == 0 ? 500 : min(max(stored, 300), 1000)
+    delayMS = HoverDelay.resolve(
+      stored: defaults.double(forKey: "delayMS"),
+      version: defaults.integer(forKey: "hoverPrefsVersion"))
     skipConfirmation = defaults.bool(forKey: "skipConfirmation")
     successNotification = defaults.bool(forKey: "successNotification")
+    qrEnabled = defaults.object(forKey: "qrEnabled") as? Bool ?? true
+    grabEnabled = defaults.object(forKey: "grabEnabled") as? Bool ?? true
+    anyOtherLinkQR = defaults.bool(forKey: "anyOtherLinkQR")
+    customPatterns = defaults.stringArray(forKey: "customPatterns") ?? []
+    prCardEnabled = defaults.object(forKey: "prCardEnabled") as? Bool ?? true
+    defaults.set(HoverDelay.currentVersion, forKey: "hoverPrefsVersion")
+    defaults.set(delayMS, forKey: "delayMS")
+  }
+  var linkFilter: LinkFilter {
+    LinkFilter(
+      qrEnabled: qrEnabled, grabEnabled: grabEnabled, patterns: customPatterns,
+      anyOtherLink: anyOtherLinkQR)
   }
   func saveOrganization(_ value: String) {
     organization = value.lowercased()
@@ -39,6 +57,11 @@ final class Preferences: ObservableObject {
     defaults.set(delayMS, forKey: "delayMS")
     defaults.set(skipConfirmation, forKey: "skipConfirmation")
     defaults.set(successNotification, forKey: "successNotification")
+    defaults.set(qrEnabled, forKey: "qrEnabled")
+    defaults.set(grabEnabled, forKey: "grabEnabled")
+    defaults.set(anyOtherLinkQR, forKey: "anyOtherLinkQR")
+    defaults.set(customPatterns, forKey: "customPatterns")
+    defaults.set(prCardEnabled, forKey: "prCardEnabled")
     changed?()
   }
 }
@@ -59,6 +82,9 @@ struct PreferencesView: View {
   @State private var hasSavedToken = false
   @State private var showingLicense = false
   @State private var selection: SettingsPage = .general
+  @State private var newPattern = ""
+  @State private var patternError = ""
+  @State private var testLink = ""
   private let accent = Color(nsColor: .systemBlue)
 
   var body: some View {
@@ -72,6 +98,7 @@ struct PreferencesView: View {
           }
         }.padding(.bottom, 22).padding(.top, 8)
         sidebarButton(.general)
+        sidebarButton(.qrLinks)
         sidebarButton(.azureDevOps)
         Spacer()
         Divider().padding(.vertical, 8)
@@ -88,6 +115,7 @@ struct PreferencesView: View {
           }.padding(.bottom, 4)
           switch selection {
           case .general: generalPage
+          case .qrLinks: qrLinksPage
           case .azureDevOps: azurePage
           case .about: aboutPage
           }
@@ -158,10 +186,10 @@ struct PreferencesView: View {
         }
       }
       if !loginMessage.isEmpty { Text(loginMessage).font(.caption).foregroundStyle(.red) }
-      groupTitle("Hover")
+      groupTitle("Hover timing")
       SettingsCard {
-        settingsRow("Hover mode", detail: "Use Option to show cards only when you need them.") {
-          Picker("Hover mode", selection: $preferences.optionHover) {
+        settingsRow("Trigger", detail: "Applies to QR links and PR cards.") {
+          Picker("Trigger", selection: $preferences.optionHover) {
             Text("Delayed").tag(false)
             Text("Option + Hover").tag(true)
           }.labelsHidden().frame(width: 135)
@@ -173,16 +201,107 @@ struct PreferencesView: View {
             Spacer()
             Text("\(Int(preferences.delayMS)) ms").monospacedDigit().foregroundStyle(.secondary)
           }
-          Slider(value: $preferences.delayMS, in: 300...1000, step: 50)
-        }.padding(16)
+          Slider(value: $preferences.delayMS, in: HoverDelay.range, step: 50)
+          HStack {
+            Text("0.5 s")
+            Spacer()
+            Text("Default 0.8 s")
+            Spacer()
+            Text("1.5 s")
+          }.font(.caption).foregroundStyle(.secondary)
+        }
+        .padding(16).disabled(preferences.optionHover).opacity(preferences.optionHover ? 0.45 : 1)
       }
-      Label("PR links show a preview. Other web links show a QR code.", systemImage: "link")
-        .font(.caption).foregroundStyle(.secondary)
       Text(
         "Cards follow your Mac’s light or dark appearance. QR codes are generated offline and close after copying. Apps must expose link targets through Accessibility."
       )
       .font(.caption).foregroundStyle(.secondary)
     }
+  }
+
+  private var qrLinksPage: some View {
+    VStack(alignment: .leading, spacing: 18) {
+      SettingsCard {
+        settingsRow("Show QR on hover", detail: "Turn off to stop every QR card.") {
+          Toggle("Show QR on hover", isOn: $preferences.qrEnabled).labelsHidden()
+            .tint(Color(nsColor: .systemGreen))
+        }
+      }
+      VStack(alignment: .leading, spacing: 18) {
+        groupTitle("Built in")
+        SettingsCard {
+          settingsRow("Grab links", detail: LinkFilter.grabPattern) {
+            Toggle("Grab links", isOn: $preferences.grabEnabled).labelsHidden()
+              .tint(Color(nsColor: .systemGreen))
+          }
+        }
+        groupTitle("Your patterns")
+        SettingsCard {
+          ForEach(Array(preferences.customPatterns.enumerated()), id: \.offset) { index, pattern in
+            HStack {
+              Image(systemName: "link").foregroundStyle(.secondary)
+              Text(pattern).font(.system(size: 12, design: .monospaced))
+              Spacer()
+              Button {
+                preferences.customPatterns.remove(at: index)
+              } label: {
+                Image(systemName: "xmark")
+              }.buttonStyle(.plain).accessibilityLabel("Remove pattern")
+            }.padding(.horizontal, 16).padding(.vertical, 10)
+            Divider()
+          }
+          HStack {
+            TextField("github.com/your-org/*", text: $newPattern)
+              .textFieldStyle(.roundedBorder).onSubmit(addPattern)
+              .onChange(of: newPattern) { _ in patternError = "" }
+            Button("Add", action: addPattern)
+          }.padding(12)
+        }
+        if !patternError.isEmpty {
+          Text(patternError).font(.caption).foregroundStyle(.red)
+        }
+        Text("Use * as a wildcard. Scheme is ignored, and matching isn’t case sensitive.")
+          .font(.caption).foregroundStyle(.secondary)
+        groupTitle("Everything else")
+        SettingsCard {
+          settingsRow(
+            "Show QR for any other link", detail: "Off by default. Other links are ignored."
+          ) {
+            Toggle("Show QR for any other link", isOn: $preferences.anyOtherLinkQR)
+              .labelsHidden().tint(Color(nsColor: .systemGreen))
+          }
+        }
+        SettingsCard {
+          HStack {
+            Image(systemName: "flask").foregroundStyle(.secondary)
+            TextField("Paste a link to test", text: $testLink).textFieldStyle(.roundedBorder)
+            Text(testResult).font(.caption).foregroundStyle(.secondary)
+              .frame(minWidth: 70, alignment: .trailing)
+          }.padding(12)
+        }
+      }.disabled(!preferences.qrEnabled).opacity(preferences.qrEnabled ? 1 : 0.45)
+    }
+  }
+
+  private var testResult: String {
+    let text = testLink.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !text.isEmpty else { return "" }
+    let value = text.contains("://") ? text : "https://" + text
+    guard let url = URL(string: value) else { return "Ignored" }
+    return preferences.linkFilter.allowsQR(url) ? "Shows QR" : "Ignored"
+  }
+
+  private func addPattern() {
+    guard let pattern = LinkPattern.normalize(newPattern) else {
+      patternError = "Enter a pattern like github.com/your-org/*"
+      return
+    }
+    guard pattern != LinkFilter.grabPattern, !preferences.customPatterns.contains(pattern) else {
+      patternError = "That pattern is already covered"
+      return
+    }
+    preferences.customPatterns.append(pattern)
+    newPattern = ""
   }
 
   private var azurePage: some View {
@@ -213,6 +332,13 @@ struct PreferencesView: View {
         "Use the organization name, not its URL. Code (Read & Write) scope is required for approval. Tokens stay in this Mac’s Keychain and are never displayed."
       )
       .font(.caption).foregroundStyle(.secondary)
+      groupTitle("Pull requests")
+      SettingsCard {
+        settingsRow("Show PR card on hover", detail: "PR links show status instead of a QR card.") {
+          Toggle("Show PR card on hover", isOn: $preferences.prCardEnabled).labelsHidden()
+            .tint(Color(nsColor: .systemGreen))
+        }
+      }
       groupTitle("Approval")
       SettingsCard {
         settingsRow(
@@ -414,10 +540,11 @@ func safeMessage(_ error: Error) -> String {
 }
 
 private enum SettingsPage: String {
-  case general, azureDevOps, about
+  case general, qrLinks, azureDevOps, about
   var title: String {
     switch self {
     case .general: "General"
+    case .qrLinks: "QR links"
     case .azureDevOps: "Azure DevOps"
     case .about: "About"
     }
@@ -425,6 +552,7 @@ private enum SettingsPage: String {
   var symbol: String {
     switch self {
     case .general: "gearshape.fill"
+    case .qrLinks: "qrcode"
     case .azureDevOps: "checkmark.bubble.fill"
     case .about: "info.circle.fill"
     }
@@ -432,6 +560,7 @@ private enum SettingsPage: String {
   var subtitle: String {
     switch self {
     case .general: "Make LinkPeek feel at home on your Mac."
+    case .qrLinks: "Hover a link to get its QR code. Only the links below show a card."
     case .azureDevOps: "Connect your account and choose how you approve."
     case .about: "Small utility. Useful links."
     }

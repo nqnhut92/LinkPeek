@@ -29,7 +29,7 @@ If Windows assets are not published yet, download a completed build from [Action
 
 To update, quit LinkPeek and replace the app in Applications. Release builds use a stable signing identity to help preserve granted permissions across updates. A development or ad-hoc build has a different signing identity and may require granting permissions again. About displays the running version and build.
 
-Each release ZIP has a matching `.sha256` file. To check a download, put both files in the same folder and run `shasum -a 256 -c LinkPeek-0.1.1.zip.sha256` there (substitute the release version).
+Each release ZIP has a matching `.sha256` file. To check a download, put both files in the same folder and run `shasum -a 256 -c LinkPeek-0.2.0.zip.sha256` there (substitute the release version).
 
 ## Run on macOS
 
@@ -37,7 +37,7 @@ Open **`LinkPeek.xcodeproj`** directly (rather than the folder or `Package.swift
 
 Use **Link menu → Settings… → General → Grant access…** and enable the running app. Open **Link menu → Settings… → Azure DevOps**, enter the Azure DevOps organization name and save a PAT with **Code (Read & Write)** scope. PATs remain in this Mac's Keychain. **Test Connection** verifies identity without submitting a vote.
 
-Hover an HTTP or HTTPS link in any app that exposes its target URL through Accessibility. QR generation requires no PAT or network request. Use **Copy Link** to copy the full URL or **Copy QR** to copy the PNG image. Either successful copy closes the popover and prevents reopening until the pointer leaves the link. For Azure DevOps PR features, hover a PR link. The app must expose the actual link URL through Accessibility; friendly labels without exposed targets are not supported. Redirect links produce a QR of the exposed URL and are not unwrapped for PR previews. The default dwell is 500 ms; Option + Hover is optional. Approved, completed and draft states are non-actionable. **Approve → Confirm Approve** (default) revalidates the PR and commit before submitting one vote. The Azure DevOps API cannot guarantee atomic approval against a head SHA; see the design document for constraints.
+Hover an HTTP or HTTPS link in any app that exposes its target URL through Accessibility. QR generation requires no PAT or network request. Use **Copy Link** to copy the full URL or **Copy QR** to copy the PNG image. Either successful copy closes the popover and prevents reopening until the pointer leaves the link. For Azure DevOps PR features, hover a PR link. The app must expose the actual link URL through Accessibility; friendly labels without exposed targets are not supported. Redirect links produce a QR of the exposed URL and are not unwrapped for PR previews. The default dwell is 800 ms (500–1500 ms); Option + Hover is optional. QR cards appear only for Grab links (`app.grab.com/s/*`) and any patterns you add under **Settings → QR links**; turn on "Show QR for any other link" to restore the old behavior, or turn off "Show QR on hover" entirely. Approved, completed and draft states are non-actionable. **Approve → Confirm Approve** (default) revalidates the PR and commit before submitting one vote. The Azure DevOps API cannot guarantee atomic approval against a head SHA; see the design document for constraints.
 
 ## macOS development
 
@@ -65,7 +65,7 @@ Enable **Settings → General → Launch at login** to start LinkPeek when signi
 
 ## macOS app identity and version
 
-The project, scheme, executable, Swift module and application are named **LinkPeek** (`LinkPeek.xcodeproj`, `LinkPeek.app`). The bundle identifier is `com.linkpeek.app`. The marketing version is separate from the timestamp build number; About shows `Version 0.1.1 (build-YYYYMMDD.HHMMSS)`, read from the built bundle.
+The project, scheme, executable, Swift module and application are named **LinkPeek** (`LinkPeek.xcodeproj`, `LinkPeek.app`). The bundle identifier is `com.linkpeek.app`. The marketing version is separate from the timestamp build number; About shows `Version 0.2.0 (build-YYYYMMDD.HHMMSS)`, read from the built bundle.
 
 When upgrading from PR Hover, known preferences are copied once where LinkPeek has no saved value. The original Keychain service is retained to preserve PATs. Grant Accessibility to the renamed app and enable Launch at login for LinkPeek if needed. Quit old copies before running the renamed app.
 

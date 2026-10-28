@@ -22,6 +22,7 @@
 		C6BA4B36E1D6DAEA84B3AE3E /* Inspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECCBF121976E6B840C1C17F4 /* Inspector.swift */; };
 		D131F24A4A0AC8B9AB4E75F6 /* AppIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 73CECD33A4233613070E3770 /* AppIcon.png */; };
 		ED0B68D6DC36D911A4DCBA3D /* PRLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BD187D755B76714615FA2D0 /* PRLink.swift */; };
+		A1C0DE5E00000000F11E0002 /* LinkFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE5E00000000F11E0001 /* LinkFilter.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +30,7 @@
 		D1BBE48DB63C4215A74366EC /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		A44444444444444444444444 /* AppInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInfo.swift; sourceTree = "<group>"; };
 		A22222222222222222222222 /* QRGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRGenerator.swift; sourceTree = "<group>"; };
+		A1C0DE5E00000000F11E0001 /* LinkFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkFilter.swift; sourceTree = "<group>"; };
 		0BD187D755B76714615FA2D0 /* PRLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRLink.swift; sourceTree = "<group>"; };
 		3854A15AF6B60201C56DBADD /* HoverCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoverCardView.swift; sourceTree = "<group>"; };
 		424F511C60D7894AFB3D638C /* TECHNICAL_DESIGN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = TECHNICAL_DESIGN.md; sourceTree = "<group>"; };
@@ -119,6 +121,7 @@
 				5C258CE14BA6FC46C35C581E /* App.swift */,
 				ECCBF121976E6B840C1C17F4 /* Inspector.swift */,
 				0BD187D755B76714615FA2D0 /* PRLink.swift */,
+				A1C0DE5E00000000F11E0001 /* LinkFilter.swift */,
 				B8025F89CD194B7A14E950EE /* PanelPlacement.swift */,
 				8628BF7ECC87F739F4AC023D /* Credentials.swift */,
 				713F65B4B6813F21C7B22F54 /* AzureDevOpsClient.swift */,
@@ -215,6 +218,7 @@
 				A33333333333333333333333 /* AppInfo.swift in Sources */,
 				C6BA4B36E1D6DAEA84B3AE3E /* Inspector.swift in Sources */,
 				ED0B68D6DC36D911A4DCBA3D /* PRLink.swift in Sources */,
+				A1C0DE5E00000000F11E0002 /* LinkFilter.swift in Sources */,
 				25D0E0DD52E1E5A1E8A96F8F /* PanelPlacement.swift in Sources */,
 				50A585FC2BF8D7BD1F53F0E7 /* Credentials.swift in Sources */,
 				AD427210E2F52C61D3325FB7 /* AzureDevOpsClient.swift in Sources */,
@@ -254,7 +258,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.linkpeek.app;
 				PRODUCT_MODULE_NAME = LinkPeek;
-				MARKETING_VERSION = 0.1.1;
+				MARKETING_VERSION = 0.2.0;
 				CURRENT_PROJECT_VERSION = 1;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -288,7 +292,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.linkpeek.app;
 				PRODUCT_MODULE_NAME = LinkPeek;
-				MARKETING_VERSION = 0.1.1;
+				MARKETING_VERSION = 0.2.0;
 				CURRENT_PROJECT_VERSION = 1;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;

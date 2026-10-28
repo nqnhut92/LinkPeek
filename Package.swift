@@ -13,7 +13,7 @@ let package = Package(
       sources: [
         "PRLink.swift", "PanelPlacement.swift", "Credentials.swift", "AzureDevOpsClient.swift",
         "HoverService.swift", "QRGenerator.swift", "AppInfo.swift", "Inspector.swift",
-        "PATSecureField.swift",
+        "PATSecureField.swift", "LinkFilter.swift",
       ]),
     .testTarget(name: "LinkPeekTests", dependencies: ["LinkPeek"], path: "Tests"),
   ])

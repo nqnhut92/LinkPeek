@@ -28,9 +28,24 @@ final class Inspector: Sendable {
     }
   }
 
+  /// Chromium builds its web accessibility tree only after a client sets AXEnhancedUserInterface;
+  /// Electron uses AXManualAccessibility. Ask once per process; unsupported attributes are ignored.
+  @MainActor private static var webAccessibilityRequested: Set<pid_t> = []
+
+  @MainActor
+  private static func requestWebAccessibility(pid: pid_t) {
+    guard webAccessibilityRequested.insert(pid).inserted else { return }
+    let app = AXUIElementCreateApplication(pid)
+    AXUIElementSetMessagingTimeout(app, 0.15)
+    for attribute in ["AXEnhancedUserInterface", "AXManualAccessibility"] {
+      _ = AXUIElementSetAttributeValue(app, attribute as CFString, kCFBooleanTrue)
+    }
+  }
+
   @MainActor
   private static func read(point: CGPoint, pid: pid_t, debug: Bool) -> Inspection {
     dispatchPrecondition(condition: .onQueue(.main))
+    requestWebAccessibility(pid: pid)
     let system = AXUIElementCreateSystemWide()
     AXUIElementSetMessagingTimeout(system, 0.15)
     var hit: AXUIElement?
