@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Windows.Threading;
 using LinkPeek.Core;
 
 namespace LinkPeek.Windows;
@@ -66,11 +67,22 @@ internal static class UiPreview
                 "card-pull-request-no-confirmation");
             // No client: the card shows the configuration error state without network access.
             Card(new CardWindow(prLink, null, null, new Preferences(), true, () => { }, () => { }), "card-pull-request-not-configured");
+            // Hover cards are placed against a link; the arrow faces it from below or above.
+            var work = System.Windows.Forms.Screen.PrimaryScreen!.WorkingArea;
+            Card(Placed(web, new System.Drawing.Rectangle(work.Left + 220, work.Top + 80, 170, 18)), "card-qr-below-link");
+            Card(Placed(web, new System.Drawing.Rectangle(work.Left + 220, work.Bottom - 50, 170, 18)), "card-qr-above-link");
 
             var open = new OpenLinkWindow(); Open(open); open.PreviewInvalid("ftp://example.org"); Pump();
             Capture(open, theme, "open-link"); open.Close();
             var confirm = DialogWindow.PreviewConfirmation(); Open(confirm); Capture(confirm, theme, "dialog-approve"); confirm.Close();
             Menu(theme);
+
+            CardWindow Placed(WebLink link, System.Drawing.Rectangle anchor)
+            {
+                var card = new CardWindow(link, null, null, new Preferences(), false, () => { }, () => { });
+                card.Place(anchor, new System.Drawing.Point(anchor.Left + 40, anchor.Top + 9));
+                return card;
+            }
 
             void Card(CardWindow card, string name)
             {
@@ -85,7 +97,7 @@ internal static class UiPreview
             var root = (FrameworkElement)VisualTreeHelper.GetChild(window, 0);
             Audit(root, $"{theme}/{name}", issues, window.SizeToContent == SizeToContent.Manual);
             foreach (var (scale, suffix) in Scales)
-                files.Add(SaveFramed(root, window.Background, Path.Combine(directory, theme, $"{name}@{suffix}.png"), scale, 8));
+                files.Add(SaveFramed(root, window.Background, Path.Combine(directory, theme, $"{name}@{suffix}.png"), scale, 8, framed: window is not CardWindow));
         }
 
         void Menu(string theme)
@@ -120,7 +132,7 @@ internal static class UiPreview
     }
 
     // Approximates the Windows 11 frame (rounded corners, hairline border) on a neutral desktop.
-    private static string SaveFramed(FrameworkElement root, Brush? background, string path, double scale, double radius)
+    private static string SaveFramed(FrameworkElement root, Brush? background, string path, double scale, double radius, bool framed = true)
     {
         const double margin = 16;
         var width = root.ActualWidth; var height = root.ActualHeight;
@@ -132,15 +144,15 @@ internal static class UiPreview
             context.DrawRectangle(new SolidColorBrush(dark ? Color.FromRgb(10, 10, 10) : Color.FromRgb(220, 224, 230)), null,
                 new Rect(0, 0, width + margin * 2, height + margin * 2));
             var frame = new Rect(margin, margin, width, height);
-            context.PushClip(new RectangleGeometry(frame, radius, radius));
+            if (framed) context.PushClip(new RectangleGeometry(frame, radius, radius));
             if (background is not null) context.DrawRectangle(background, null, frame);
             context.DrawRectangle(new VisualBrush(root)
             {
                 Viewbox = new Rect(0, 0, width, height), ViewboxUnits = BrushMappingMode.Absolute,
                 Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top
             }, null, frame);
-            context.Pop();
-            context.DrawRoundedRectangle(null, new Pen(new SolidColorBrush(dark ? Color.FromArgb(90, 255, 255, 255) : Color.FromArgb(60, 0, 0, 0)), 1),
+            if (framed) context.Pop();
+            if (framed) context.DrawRoundedRectangle(null, new Pen(new SolidColorBrush(dark ? Color.FromArgb(90, 255, 255, 255) : Color.FromArgb(60, 0, 0, 0)), 1),
                 new Rect(margin - 0.5, margin - 0.5, width + 1, height + 1), radius, radius);
         }
         var bitmap = new RenderTargetBitmap((int)Math.Ceiling((width + margin * 2) * scale),
@@ -201,6 +213,62 @@ internal static class UiPreview
 
     // Saved-PAT state: the mask must sit exactly where typed glyphs appear, read as a placeholder,
     // leave the PasswordBox empty, have no automation peer, and disappear as soon as typing starts.
+    // The popover must point at the link, stay on screen, never cover the link, and flip above
+    // when there is no room below.
+    public static string VerifyCardPlacement()
+    {
+        App.PreviewMode = false;
+        _ = App.Instance;
+        App.FollowSystemTheme(force: true);
+        var work = System.Windows.Forms.Screen.PrimaryScreen!.WorkingArea;
+        var link = WebLink.Parse("https://example.org/placement")!;
+        var report = new List<string>();
+        void Check(string name, System.Drawing.Rectangle anchor, bool expectBelow)
+        {
+            var card = new CardWindow(link, null, null, new Preferences(), false, () => { }, () => { });
+            card.Place(anchor, new System.Drawing.Point(anchor.Left + Math.Min(40, anchor.Width / 2), anchor.Top + anchor.Height / 2));
+            card.ShowActivated = false; card.Show(); Pump(TimeSpan.FromMilliseconds(300));
+            var bounds = card.ScreenBounds; var (top, bottom) = card.Arrows;
+            card.Close();
+            report.Add($"{name}: card {bounds}, anchor {anchor}, arrow top={top} bottom={bottom}");
+            if (bounds.IntersectsWith(anchor)) throw new InvalidOperationException("Card covers its link. " + report[^1]);
+            if (bounds.Left < work.Left || bounds.Right > work.Right || bounds.Top < work.Top || bounds.Bottom > work.Bottom)
+                throw new InvalidOperationException("Card leaves the work area. " + report[^1]);
+            if (expectBelow ? !top || bottom || bounds.Top < anchor.Bottom : top || !bottom || bounds.Bottom > anchor.Top)
+                throw new InvalidOperationException("Card or arrow is on the wrong side of the link. " + report[^1]);
+        }
+        Check("below", new System.Drawing.Rectangle(work.Left + 200, work.Top + 60, 160, 18), true);
+        Check("above", new System.Drawing.Rectangle(work.Left + 200, work.Bottom - 50, 160, 18), false);
+        Check("right edge", new System.Drawing.Rectangle(work.Right - 40, work.Top + 60, 36, 18), true);
+        Check("left edge", new System.Drawing.Rectangle(work.Left + 2, work.Top + 60, 36, 18), true);
+        return string.Join("; ", report);
+    }
+
+    // Closing Settings once crashed the app: the theme watcher was detached after the window
+    // handle was gone. The crash was reported through the dispatcher, so listen for it here.
+    public static void VerifySettingsCloseDoesNotThrow()
+    {
+        App.PreviewMode = false;
+        _ = App.Instance;
+        Exception? failure = null;
+        DispatcherUnhandledExceptionEventHandler handler = (_, e) => { failure = e.Exception; e.Handled = true; };
+        Application.Current.DispatcherUnhandledException += handler;
+        try
+        {
+            for (var i = 0; i < 3; i++)
+            {
+                var settings = new SettingsWindow(new Preferences { Organization = "contoso" }, () => { }, preview: false, credentialExists: _ => false);
+                settings.ShowActivated = false; settings.Show(); Pump(TimeSpan.FromMilliseconds(200));
+                settings.Close(); Pump(TimeSpan.FromMilliseconds(200));
+            }
+            // A window closed before it was ever shown must not throw either.
+            new SettingsWindow(new Preferences(), () => { }, preview: false, credentialExists: _ => false).Close();
+            Pump(TimeSpan.FromMilliseconds(100));
+        }
+        finally { Application.Current.DispatcherUnhandledException -= handler; }
+        if (failure is not null) throw new InvalidOperationException("Closing Settings raised an unhandled exception.", failure);
+    }
+
     // Long-running tray sessions open and close many cards. Each cycle must leave no window,
     // GDI or USER handles behind, and an unchanged theme must not be re-applied per hover.
     public static string VerifyCardLifecycle(int cycles = 200)

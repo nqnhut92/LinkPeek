@@ -70,14 +70,25 @@ internal sealed partial class SettingsWindow : FluentWindow, INavigationViewPage
         azure.TestConnection.Click += async (_, _) => await TestConnectionAsync();
         about.License.Click += (_, _) => ShowTextFile("MIT License", "LICENSE");
         about.Notices.Click += (_, _) => ShowTextFile("Third-party notices", "THIRD-PARTY-NOTICES.txt");
-        Closing += (_, _) => { if (delaySave.IsEnabled) { delaySave.Stop(); Persist(() => { }, general.Status); } };
-        Closed += (_, _) => { azure.Token.Clear(); if (!preview) Wpf.Ui.Appearance.SystemThemeWatcher.UnWatch(this); };
+        Closing += (_, _) =>
+        {
+            if (delaySave.IsEnabled) { delaySave.Stop(); Persist(() => { }, general.Status); }
+            // UnWatch needs the window handle, which is already destroyed by the time Closed fires.
+            if (!preview) StopWatchingTheme();
+        };
+        Closed += (_, _) => azure.Token.Clear();
         UpdateCredential();
         loading = false;
         // NavigationView can navigate only after its template is applied.
         Loaded += (_, _) => ShowPage(pendingPage);
         // Like WinUI's NavigationView Auto mode: collapse to icons when the window is narrow.
         SizeChanged += (_, _) => Navigation.IsPaneOpen = ActualWidth >= 900;
+    }
+
+    private void StopWatchingTheme()
+    {
+        try { Wpf.Ui.Appearance.SystemThemeWatcher.UnWatch(this); }
+        catch (InvalidOperationException) { /* Closed before the window handle existed. */ }
     }
 
     object? INavigationViewPageProvider.GetPage(Type pageType) =>

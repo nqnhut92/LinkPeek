@@ -37,6 +37,9 @@ internal static class Program
             Console.WriteLine($"PASS: {previews.Count} light/dark previews at 100% and 200% scale; layout audit found no clipped or overflowing controls.");
             UiPreview.VerifySavedPatMask(output);
             Console.WriteLine("PASS: " + UiPreview.VerifyCardLifecycle());
+            Console.WriteLine("PASS: popover placement: " + UiPreview.VerifyCardPlacement());
+            UiPreview.VerifySettingsCloseDoesNotThrow();
+            Console.WriteLine("PASS: opening and closing Settings raises no unhandled exception.");
             Console.WriteLine("PASS: saved-PAT mask aligns with typed glyphs, uses placeholder tone, keeps the input empty and hides on typing.");
             return 0;
         }

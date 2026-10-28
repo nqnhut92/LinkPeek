@@ -9,7 +9,7 @@ using Drawing = System.Drawing;
 
 namespace LinkPeek.Windows;
 
-internal sealed partial class CardWindow : FluentWindow
+internal sealed partial class CardWindow : Window
 {
     private readonly WebLink link;
     private readonly AzureDevOpsClient? client;
@@ -36,11 +36,17 @@ internal sealed partial class CardWindow : FluentWindow
         this.preferences = preferences; this.copied = copied; this.notify = notify; Manual = manual;
         InitializeComponent();
         ShowActivated = manual;
-        Logo.Source = App.Logo;
-        CloseButton.Click += (_, _) => Close();
-        Heading.Text = link.PullRequest is { } pr ? $"Pull request #{pr.Id}" : "Share this link";
-        Detail(SymbolRegular.Globe24, link.Uri.Host);
-        Detail(SymbolRegular.Link24, link.Text.Length > 120 ? link.Text[..120] + "…" : link.Text, caption: true);
+        // Hover cards close by moving away or Esc; a card opened with Open link… stays until closed.
+        if (manual) { CloseButton.Visibility = Visibility.Visible; CloseButton.Click += (_, _) => Close(); }
+        Caption.Text = link.PullRequest is null ? "LINK QR" : "AZURE DEVOPS PULL REQUEST";
+        Heading.Text = link.PullRequest is { } pr ? $"Pull request #{pr.Id}" : link.Uri.Host;
+        if (link.PullRequest is null)
+            Detail(null, link.Text.Length > 120 ? link.Text[..120] + "…" : link.Text, caption: true);
+        else
+        {
+            Detail(SymbolRegular.Globe24, link.Uri.Host);
+            Detail(SymbolRegular.Link24, link.Text.Length > 120 ? link.Text[..120] + "…" : link.Text, caption: true);
+        }
         if (link.PullRequest is null)
         {
             AddAction("Copy link", SymbolRegular.Copy24, () => Copy(false), true);
@@ -78,7 +84,7 @@ internal sealed partial class CardWindow : FluentWindow
     private static DrawingImage QrDrawing(QRCodeData data)
     {
         var modules = data.ModuleMatrix.Count;
-        var size = Math.Max(2, 216 / modules);
+        var size = Math.Max(2, 168 / modules);
         var geometry = new GeometryGroup { FillRule = FillRule.Nonzero };
         for (var y = 0; y < modules; y++)
             for (var x = 0; x < modules; x++)
@@ -90,18 +96,23 @@ internal sealed partial class CardWindow : FluentWindow
         return image;
     }
 
-    private void Detail(SymbolRegular symbol, string text, bool caption = false)
+    private void Detail(SymbolRegular? symbol, string text, bool caption = false)
     {
         var row = new System.Windows.Controls.Grid { Margin = new Thickness(0, 2, 0, 2) };
         row.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = GridLength.Auto });
         row.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition());
-        var icon = new SymbolIcon { Symbol = symbol, FontSize = 14, Margin = new Thickness(0, 2, 8, 0), VerticalAlignment = VerticalAlignment.Top };
-        icon.SetResourceReference(ForegroundProperty, "TextFillColorSecondaryBrush");
         var label = new Wpf.Ui.Controls.TextBlock { Text = text, TextWrapping = TextWrapping.Wrap,
-            FontTypography = caption ? FontTypography.Caption : FontTypography.Body };
+            FontSize = caption ? 12 : 13 };
         label.SetResourceReference(ForegroundProperty, caption ? "TextFillColorSecondaryBrush" : "TextFillColorPrimaryBrush");
-        System.Windows.Controls.Grid.SetColumn(label, 1);
-        row.Children.Add(icon); row.Children.Add(label); Details.Children.Add(row);
+        if (symbol is { } glyph)
+        {
+            var icon = new SymbolIcon { Symbol = glyph, FontSize = 14, Margin = new Thickness(0, 2, 8, 0), VerticalAlignment = VerticalAlignment.Top };
+            icon.SetResourceReference(ForegroundProperty, "TextFillColorSecondaryBrush");
+            row.Children.Add(icon);
+            System.Windows.Controls.Grid.SetColumn(label, 1);
+        }
+        else System.Windows.Controls.Grid.SetColumnSpan(label, 2);
+        row.Children.Add(label); Details.Children.Add(row);
     }
 
     private void Status(string text)
@@ -136,7 +147,8 @@ internal sealed partial class CardWindow : FluentWindow
     private void Render(Snapshot value)
     {
         snapshot = value;
-        Heading.Text = $"#{value.Pr.PullRequestId} · {value.Pr.Title}";
+        Caption.Text = $"AZURE DEVOPS PULL REQUEST · #{value.Pr.PullRequestId}";
+        Heading.Text = value.Pr.Title;
         Details.Children.Clear();
         Detail(SymbolRegular.Person24, value.Pr.CreatedBy?.DisplayName ?? "Unknown author");
         Detail(SymbolRegular.BranchCompare24,
@@ -204,8 +216,21 @@ internal sealed partial class CardWindow : FluentWindow
         ? error.Message : "Operation failed. Check Settings and try again.";
 
     // Screen geometry is in physical pixels, matching Cursor.Position and UI Automation bounds.
-    public Drawing.Rectangle ScreenBounds =>
-        GetWindowRect(new WindowInteropHelper(this).Handle, out var r) ? Drawing.Rectangle.FromLTRB(r.Left, r.Top, r.Right, r.Bottom) : default;
+    // Bounds describe the visible card and arrow, excluding the transparent shadow margin.
+    public Drawing.Rectangle ScreenBounds
+    {
+        get
+        {
+            if (!GetWindowRect(new WindowInteropHelper(this).Handle, out var r)) return default;
+            var inset = (int)Math.Round(ShadowMargin * Scale);
+            return Drawing.Rectangle.FromLTRB(r.Left + inset, r.Top + inset, r.Right - inset, r.Bottom - inset);
+        }
+    }
+
+    internal (bool Top, bool Bottom) Arrows => (ArrowTop.Visibility == Visibility.Visible, ArrowBottom.Visibility == Visibility.Visible);
+
+    private const double ShadowMargin = 16, ArrowInset = 22, ScreenGap = 6;
+    private double Scale => VisualTreeHelper.GetDpi(this).DpiScaleX;
 
     public void Place(Drawing.Rectangle anchor, Drawing.Point point)
     {
@@ -213,20 +238,34 @@ internal sealed partial class CardWindow : FluentWindow
         pointer = point; placed = true;
         // Create the window on the pointer's monitor so WPF picks that monitor's DPI before layout.
         var handle = new WindowInteropHelper(this).EnsureHandle();
-        SetWindowPos(handle, IntPtr.Zero, point.X, this.anchor.Bottom + 6, 0, 0, NoSize | NoZOrder | NoActivate);
+        SetWindowPos(handle, IntPtr.Zero, point.X, this.anchor.Bottom, 0, 0, NoSize | NoZOrder | NoActivate);
     }
 
+    // The arrow tip touches the link under the pointer. The card prefers to sit below the link,
+    // flips above when it does not fit, and is shifted to stay on screen without detaching the arrow.
     private void Reposition()
     {
         if (!placed) return;
-        var size = ScreenBounds.Size;
-        if (size.IsEmpty) return;
+        var current = ScreenBounds;
+        if (current.IsEmpty) return;
         var work = System.Windows.Forms.Screen.FromPoint(pointer).WorkingArea;
-        var x = Math.Clamp(pointer.X, work.Left, Math.Max(work.Left, work.Right - size.Width));
-        var y = anchor.Bottom + 6;
-        if (y + size.Height > work.Bottom) y = anchor.Top - size.Height - 6;
-        y = Math.Clamp(y, work.Top, Math.Max(work.Top, work.Bottom - size.Height));
-        SetWindowPos(new WindowInteropHelper(this).Handle, IntPtr.Zero, x, y, 0, 0, NoSize | NoZOrder | NoActivate);
+        var scale = Scale;
+        var inset = ShadowMargin * scale;
+        var width = current.Width; var height = current.Height; // card plus arrow
+        var tipX = anchor.Width <= 1 ? pointer.X : Math.Clamp(pointer.X, anchor.Left, Math.Max(anchor.Left, anchor.Right - 1));
+        var x = Math.Clamp(tipX - width / 2, work.Left + ScreenGap, Math.Max(work.Left + ScreenGap, work.Right - ScreenGap - width));
+        var below = anchor.Bottom + height <= work.Bottom - ScreenGap;
+        var above = anchor.Top - height >= work.Top + ScreenGap;
+        var showBelow = below || !above;
+        var y = showBelow ? anchor.Bottom : anchor.Top - height;
+        var attached = below || above;
+        if (!attached) y = Math.Clamp(y, work.Top, Math.Max(work.Top, work.Bottom - height));
+        ArrowTop.Visibility = attached && showBelow ? Visibility.Visible : Visibility.Hidden;
+        ArrowBottom.Visibility = attached && !showBelow ? Visibility.Visible : Visibility.Hidden;
+        var arrow = attached && showBelow ? ArrowTop : ArrowBottom;
+        var offset = Math.Clamp((tipX - x) / scale, ArrowInset, Math.Max(ArrowInset, width / scale - ArrowInset));
+        arrow.Margin = new Thickness(offset - arrow.Width / 2, arrow.Margin.Top, 0, arrow.Margin.Bottom);
+        SetWindowPos(new WindowInteropHelper(this).Handle, IntPtr.Zero, (int)Math.Round(x - inset), (int)Math.Round(y - inset), 0, 0, NoSize | NoZOrder | NoActivate);
     }
 
     protected override void OnSourceInitialized(EventArgs e)
