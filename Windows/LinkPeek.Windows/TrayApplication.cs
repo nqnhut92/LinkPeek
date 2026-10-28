@@ -192,11 +192,14 @@ internal sealed class TrayApplication : IDisposable
             if (foreground == inspectedProcess && Math.Abs(point.X - inspectedPoint.X) <= 3 &&
                 Math.Abs(point.Y - inspectedPoint.Y) <= 3)
             {
-                var key = result?.Link.Text;
+                // Pull requests follow their own switch; every other link must pass the QR filter.
+                var allowed = result is not null &&
+                    (preferences.PrCardEnabled && result.Link.PullRequest is not null || preferences.LinkFilter.AllowsQr(result.Link.Uri));
+                var key = allowed ? result!.Link.Text : null;
                 if (suppressed is not null && key != suppressed) suppressed = null;
                 gate.Observe(key == suppressed ? null : key, clock.Elapsed);
-                if (result is not null && gate.Start(clock.Elapsed, TimeSpan.FromMilliseconds(preferences.DelayMs)))
-                { ShowCard(result.Link, result.Bounds, point, false); return; }
+                if (allowed && gate.Start(clock.Elapsed, TimeSpan.FromMilliseconds(preferences.DelayMs)))
+                { ShowCard(result!.Link, result.Bounds, point, false); return; }
             }
             else gate.Reset();
         }

@@ -101,6 +101,24 @@
                 </WrapPanel>
             </ui:CardControl>
 
+            <ui:TextBlock Style="{StaticResource SettingsSectionStyle}" Text="Pull requests" />
+            <ui:CardControl Style="{StaticResource SettingsCardStyle}">
+                <ui:CardControl.Icon>
+                    <ui:SymbolIcon Symbol="BranchCompare24" />
+                </ui:CardControl.Icon>
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="Show PR card on hover" />
+                        <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="PR links show status instead of a QR card." />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:ToggleSwitch
+                    x:Name="PrCard"
+                    AutomationProperties.Name="Show PR card on hover"
+                    OffContent="Off"
+                    OnContent="On" />
+            </ui:CardControl>
+
             <ui:TextBlock Style="{StaticResource SettingsSectionStyle}" Text="Approval" />
             <ui:CardControl Style="{StaticResource SettingsCardStyle}">
                 <ui:CardControl.Icon>

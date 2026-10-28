@@ -39,7 +39,8 @@ internal static class UiPreview
             var theme = dark ? "dark" : "light";
             foreach (var (page, saved, name) in new[]
             {
-                (SettingsPage.General, false, "settings-general"), (SettingsPage.AzureDevOps, false, "settings-azure"),
+                (SettingsPage.General, false, "settings-general"), (SettingsPage.QrLinks, false, "settings-qr-links"),
+                (SettingsPage.AzureDevOps, false, "settings-azure"),
                 (SettingsPage.AzureDevOps, true, "settings-azure-pat-saved"), (SettingsPage.About, false, "settings-about")
             })
             {

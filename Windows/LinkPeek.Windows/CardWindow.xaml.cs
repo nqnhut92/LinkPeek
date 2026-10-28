@@ -29,6 +29,9 @@ internal sealed partial class CardWindow : Window
     public bool Manual { get; }
     public bool IsClosed { get; private set; }
 
+    // With PR cards switched off, pull request links get the same QR card as any other link.
+    private PullRequestLink? Pr => preferences.PrCardEnabled ? link.PullRequest : null;
+
     public CardWindow(WebLink link, AzureDevOpsClient? client, ApprovalService? approvals,
         Preferences preferences, bool manual, Action copied, Action notify, Snapshot? previewSnapshot = null)
     {
@@ -38,16 +41,16 @@ internal sealed partial class CardWindow : Window
         ShowActivated = manual;
         // Hover cards close by moving away or Esc; a card opened with Open link… stays until closed.
         if (manual) { CloseButton.Visibility = Visibility.Visible; CloseButton.Click += (_, _) => Close(); }
-        Caption.Text = link.PullRequest is null ? "LINK QR" : "AZURE DEVOPS PULL REQUEST";
-        Heading.Text = link.PullRequest is { } pr ? $"Pull request #{pr.Id}" : link.Uri.Host;
-        if (link.PullRequest is null)
+        Caption.Text = Pr is null ? "LINK QR" : "AZURE DEVOPS PULL REQUEST";
+        Heading.Text = Pr is { } pr ? $"Pull request #{pr.Id}" : link.Uri.Host;
+        if (Pr is null)
             Detail(null, link.Text.Length > 120 ? link.Text[..120] + "…" : link.Text, caption: true);
         else
         {
             Detail(SymbolRegular.Globe24, link.Uri.Host);
             Detail(SymbolRegular.Link24, link.Text.Length > 120 ? link.Text[..120] + "…" : link.Text, caption: true);
         }
-        if (link.PullRequest is null)
+        if (Pr is null)
         {
             AddAction("Copy link", SymbolRegular.Copy24, () => Copy(false), true);
             try
@@ -77,7 +80,7 @@ internal sealed partial class CardWindow : Window
         // Root is laid out before the HWND is resized; place from its layout size, and once more after render.
         Root.SizeChanged += (_, _) => Reposition();
         ContentRendered += (_, _) => Reposition();
-        ContentRendered += async (_, _) => { if (link.PullRequest is not null && previewSnapshot is null) await RefreshAsync(); };
+        ContentRendered += async (_, _) => { if (Pr is not null && previewSnapshot is null) await RefreshAsync(); };
         Closed += (_, _) => { IsClosed = true; lifetime.Cancel(); };
     }
 
@@ -154,7 +157,7 @@ internal sealed partial class CardWindow : Window
         Detail(SymbolRegular.Person24, value.Pr.CreatedBy?.DisplayName ?? "Unknown author");
         Detail(SymbolRegular.BranchCompare24,
             $"{value.Pr.SourceRefName?.Replace("refs/heads/", "")} → {value.Pr.TargetRefName?.Replace("refs/heads/", "")}");
-        var previous = approvals?.ReviewedHead(link.PullRequest!, value);
+        var previous = approvals?.ReviewedHead(Pr!, value);
         Status(value.Caption);
         var warnings = new List<string>();
         if (previous is not null && previous != value.Head) warnings.Add("New commits · Review changes before approving.");
@@ -171,7 +174,7 @@ internal sealed partial class CardWindow : Window
         {
             if (client is null || approvals is null) throw new UserError("Configure this organization and save a PAT in Settings.");
             Status("Loading…");
-            var value = await client.SnapshotAsync(link.PullRequest!, lifetime.Token);
+            var value = await client.SnapshotAsync(Pr!, lifetime.Token);
             if (!IsClosed) Render(value);
         }
         catch (OperationCanceledException) { }
@@ -190,7 +193,7 @@ internal sealed partial class CardWindow : Window
         try
         {
             Status("Checking current PR and commit…");
-            var prepared = await approvals.PrepareAsync(link.PullRequest!, snapshot, lifetime.Token);
+            var prepared = await approvals.PrepareAsync(Pr!, snapshot, lifetime.Token);
             if (IsClosed) return;
             if (!preferences.SkipConfirmation && !DialogWindow.Confirm(this, $"Approve PR #{snapshot.Pr.PullRequestId}?",
                     $"{snapshot.Pr.Title}\n\nCommit {snapshot.Head}\n\n" +

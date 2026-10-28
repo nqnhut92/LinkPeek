@@ -2,6 +2,8 @@ name: Windows
 
 on:
   push:
+    # `paths` is ignored for tag pushes, so limit pushes to main or a macOS-only tag would run this.
+    branches: [main]
     paths: ['Windows/**', 'Resources/AppIcon.png', 'LICENSE', '.github/workflows/windows.yml']
   pull_request:
     paths: ['Windows/**', 'Resources/AppIcon.png', 'LICENSE', '.github/workflows/windows.yml']

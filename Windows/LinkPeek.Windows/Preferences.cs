@@ -1,15 +1,26 @@
 using Microsoft.Win32;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace LinkPeek.Windows;
 
 internal sealed record Preferences
 {
     public string Organization { get; set; } = "";
-    public int DelayMs { get; set; } = 500;
+    public int DelayMs { get; set; } = HoverDelay.Default;
+    public int HoverPrefsVersion { get; set; }
     public bool AltHover { get; set; }
     public bool SkipConfirmation { get; set; }
     public bool SuccessNotification { get; set; }
+    public bool QrEnabled { get; set; } = true;
+    public bool GrabEnabled { get; set; } = true;
+    public bool AnyOtherLinkQr { get; set; }
+    public List<string> CustomPatterns { get; set; } = [];
+    public bool PrCardEnabled { get; set; } = true;
+
+    [JsonIgnore]
+    public LinkFilter LinkFilter => new(QrEnabled, GrabEnabled, CustomPatterns, AnyOtherLink: AnyOtherLinkQr);
+
     private static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LinkPeek", "settings.json");
 
@@ -17,13 +28,17 @@ internal sealed record Preferences
     {
         try
         {
-            var result = JsonSerializer.Deserialize<Preferences>(File.ReadAllText(FilePath)) ?? new();
-            result.DelayMs = Math.Clamp(result.DelayMs, 300, 1000);
+            var result = JsonSerializer.Deserialize<Preferences>(File.ReadAllText(FilePath)) ?? Fresh();
+            result.DelayMs = HoverDelay.Resolve(result.DelayMs, result.HoverPrefsVersion);
+            result.HoverPrefsVersion = HoverDelay.CurrentVersion;
             result.Organization ??= "";
+            result.CustomPatterns = (result.CustomPatterns ?? []).Where(p => LinkPattern.Normalize(p) is not null).ToList();
             return result;
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException) { return new(); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException) { return Fresh(); }
     }
+
+    private static Preferences Fresh() => new() { HoverPrefsVersion = HoverDelay.CurrentVersion };
 
     public void Save()
     {

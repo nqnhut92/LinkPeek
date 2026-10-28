@@ -48,7 +48,7 @@ Prefer Windows assets in [Releases](https://github.com/nqnhut92/LinkPeek/release
 Download the matching `.zip.sha256` alongside a release ZIP. In PowerShell, from that folder:
 
 ```powershell
-$zip = 'LinkPeek-Windows-0.1.1-win-x64.zip' # substitute the downloaded version/architecture
+$zip = 'LinkPeek-Windows-0.2.0-win-x64.zip' # substitute the downloaded version/architecture
 $expected = ((Get-Content "$zip.sha256" -Raw).Trim() -split '\s+')[0]
 $actual = (Get-FileHash $zip -Algorithm SHA256).Hash
 if ($actual -ne $expected) { throw 'SHA-256 mismatch; do not use this download.' }
@@ -70,8 +70,8 @@ The cross-publish command creates an application folder. Use `publish.ps1` (Powe
 ## Use
 
 1. Run the app. Right-click the LinkPeek tray icon (it may be under hidden icons).
-2. Hover a link for 500 ms. Move onto the card to use it. It closes after leaving for 650 ms; Escape dismisses it. Copy Link and Copy QR close the card and suppress reopening until you leave the link. Win+Shift+S holds the card for up to 20 seconds; Escape ends the hold.
-3. **Settings** controls the delay (300–1000 ms), optional Alt + hover, and launch at sign-in. Sign-in registration uses only the current user's Run key, may be restricted by company policy, and refers to the current executable path. After moving the app, turn the option off and on again. **Pause hover** temporarily stops detection.
+2. Hover a link for 800 ms. Move onto the card to use it. It closes after leaving for 650 ms; Escape dismisses it. Copy Link and Copy QR close the card and suppress reopening until you leave the link. Win+Shift+S holds the card for up to 20 seconds; Escape ends the hold.
+3. **Settings** controls the delay (500–1500 ms), optional Alt + hover, and launch at sign-in. **QR links** chooses which links open a QR card: Grab links (`app.grab.com/s/*`, on by default), your own `*` patterns, or any other link (off by default), plus a master switch. **Azure DevOps** has a switch for pull request cards. Sign-in registration uses only the current user's Run key, may be restricted by company policy, and refers to the current executable path. After moving the app, turn the option off and on again. **Pause hover** temporarily stops detection.
 4. **Open link…** accepts an explicitly pasted URL when an app does not expose its target. It does not read the clipboard automatically. That card stays open until closed or copied.
 
 Generic web links need no account or network. QR generation preserves the full original URL including query and fragment. Links with embedded credentials and non-HTTP(S) schemes are rejected. Redirect URLs are encoded as exposed, not followed or unwrapped.

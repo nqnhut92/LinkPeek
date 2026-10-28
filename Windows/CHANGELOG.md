@@ -1,5 +1,13 @@
 # Windows changes
 
+## 0.2.0
+
+Matches the macOS 0.2.0 hover changes.
+
+- New **QR links** page: a master switch, a built-in Grab links preset (`app.grab.com/s/*`), your own case-insensitive `*` patterns and a link tester. Other links no longer open a QR card unless **Show QR for any other link** is on.
+- The default hover delay is 800 ms and the slider covers 500–1500 ms. A one-time migration moves the old 500 ms default to 800 ms. Hover timing stays on the General page.
+- **Azure DevOps → Show PR card on hover** turns pull request cards off; those links then follow the QR rules.
+
 ## 0.1.1
 
 First Windows release of LinkPeek. The macOS app, its tags and its assets are unchanged. Use the source commit in `BUILD-INFO.txt` to tell builds apart.

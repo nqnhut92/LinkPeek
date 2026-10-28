@@ -1,0 +1,129 @@
+<UserControl
+    x:Class="LinkPeek.Windows.QrLinksPage"
+    x:ClassModifier="internal"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <ui:DynamicScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Style="{StaticResource SettingsPageStyle}">
+            <ui:TextBlock FontTypography="Title" Text="QR links" />
+            <ui:TextBlock
+                Margin="0,4,0,0"
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                Text="Hover a link to get its QR code. Only the links below show a card."
+                TextWrapping="Wrap" />
+
+            <ui:InfoBar
+                x:Name="Status"
+                Margin="0,20,0,0"
+                IsClosable="True"
+                IsOpen="False" />
+
+            <ui:CardControl Margin="0,20,0,0" Style="{StaticResource SettingsCardStyle}">
+                <ui:CardControl.Icon>
+                    <ui:SymbolIcon Symbol="QrCode24" />
+                </ui:CardControl.Icon>
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <ui:TextBlock Text="Show QR on hover" />
+                        <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="Turn off to stop every QR card." />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:ToggleSwitch
+                    x:Name="Enabled"
+                    AutomationProperties.Name="Show QR on hover"
+                    OffContent="Off"
+                    OnContent="On" />
+            </ui:CardControl>
+
+            <StackPanel x:Name="Options">
+                <ui:TextBlock Style="{StaticResource SettingsSectionStyle}" Text="Built in" />
+                <ui:CardControl Style="{StaticResource SettingsCardStyle}">
+                    <ui:CardControl.Icon>
+                        <ui:SymbolIcon Symbol="Link24" />
+                    </ui:CardControl.Icon>
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <ui:TextBlock Text="Grab links" />
+                            <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="app.grab.com/s/*" />
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                    <ui:ToggleSwitch
+                        x:Name="Grab"
+                        AutomationProperties.Name="Grab links"
+                        OffContent="Off"
+                        OnContent="On" />
+                </ui:CardControl>
+
+                <ui:TextBlock Style="{StaticResource SettingsSectionStyle}" Text="Your patterns" />
+                <ui:CardControl Style="{StaticResource SettingsCardStyle}">
+                    <ui:CardControl.Icon>
+                        <ui:SymbolIcon Symbol="Link24" />
+                    </ui:CardControl.Icon>
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <ui:TextBlock Text="Add a pattern" />
+                            <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="Use * as a wildcard. Scheme is ignored, and matching isn't case sensitive." />
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <ui:TextBox
+                            x:Name="NewPattern"
+                            Width="220"
+                            Margin="0,0,8,0"
+                            AutomationProperties.Name="New link pattern"
+                            PlaceholderText="github.com/your-org/*" />
+                        <ui:Button x:Name="AddPattern" Content="Add" />
+                    </StackPanel>
+                </ui:CardControl>
+                <ui:TextBlock
+                    x:Name="PatternError"
+                    Margin="1,6,0,0"
+                    FontTypography="Caption"
+                    Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                    Visibility="Collapsed" />
+                <StackPanel x:Name="PatternList" Margin="0,4,0,0" />
+
+                <ui:TextBlock Style="{StaticResource SettingsSectionStyle}" Text="Everything else" />
+                <ui:CardControl Style="{StaticResource SettingsCardStyle}">
+                    <ui:CardControl.Icon>
+                        <ui:SymbolIcon Symbol="Globe24" />
+                    </ui:CardControl.Icon>
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <ui:TextBlock Text="Show QR for any other link" />
+                            <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="Off by default. Other links are ignored." />
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                    <ui:ToggleSwitch
+                        x:Name="AnyOther"
+                        AutomationProperties.Name="Show QR for any other link"
+                        OffContent="Off"
+                        OnContent="On" />
+                </ui:CardControl>
+
+                <ui:TextBlock Style="{StaticResource SettingsSectionStyle}" Text="Test a link" />
+                <ui:CardControl Style="{StaticResource SettingsCardStyle}">
+                    <ui:CardControl.Icon>
+                        <ui:SymbolIcon Symbol="Search24" />
+                    </ui:CardControl.Icon>
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <ui:TextBlock Text="Paste a link" />
+                            <ui:TextBlock
+                                x:Name="TestResult"
+                                Style="{StaticResource SettingsDescriptionStyle}"
+                                Text="See whether LinkPeek would show a QR card." />
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                    <ui:TextBox
+                        x:Name="TestLink"
+                        Width="260"
+                        AutomationProperties.Name="Link to test"
+                        PlaceholderText="https://example.com/page" />
+                </ui:CardControl>
+            </StackPanel>
+        </StackPanel>
+    </ui:DynamicScrollViewer>
+</UserControl>

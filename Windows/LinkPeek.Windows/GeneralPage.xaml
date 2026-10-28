@@ -38,7 +38,7 @@
                     OnContent="On" />
             </ui:CardControl>
 
-            <ui:TextBlock Style="{StaticResource SettingsSectionStyle}" Text="Hover" />
+            <ui:TextBlock Style="{StaticResource SettingsSectionStyle}" Text="Hover timing" />
             <ui:CardControl Style="{StaticResource SettingsCardStyle}">
                 <ui:CardControl.Icon>
                     <ui:SymbolIcon Symbol="Timer24" />
@@ -46,7 +46,7 @@
                 <ui:CardControl.Header>
                     <StackPanel>
                         <ui:TextBlock Text="Hover delay" />
-                        <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="How long the pointer rests on a link before its card opens." />
+                        <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="How long the pointer rests on a link before its card opens. Applies to QR links and PR cards." />
                     </StackPanel>
                 </ui:CardControl.Header>
                 <StackPanel Orientation="Horizontal">
@@ -56,7 +56,7 @@
                         Margin="0,0,12,0"
                         VerticalAlignment="Center"
                         Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                        Text="500 ms"
+                        Text="800 ms"
                         TextAlignment="Right" />
                     <Slider
                         x:Name="Delay"
@@ -65,8 +65,8 @@
                         AutomationProperties.Name="Hover delay in milliseconds"
                         IsSnapToTickEnabled="True"
                         LargeChange="100"
-                        Maximum="1000"
-                        Minimum="300"
+                        Maximum="1500"
+                        Minimum="500"
                         SmallChange="50"
                         TickFrequency="50" />
                 </StackPanel>
@@ -96,7 +96,7 @@
                 <ui:CardControl.Header>
                     <StackPanel>
                         <ui:TextBlock Text="What appears on hover" />
-                        <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="Azure DevOps pull request links show a preview. Other web links become a QR code generated on this device. Cards follow your Windows light or dark theme." />
+                        <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="Pull request links show a preview. Grab links and your own patterns become a QR code generated on this device. Choose them under QR links. Cards follow your Windows light or dark theme." />
                     </StackPanel>
                 </ui:CardControl.Header>
             </ui:CardControl>

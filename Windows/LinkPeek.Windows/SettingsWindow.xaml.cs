@@ -7,7 +7,7 @@ using Wpf.Ui.Controls;
 
 namespace LinkPeek.Windows;
 
-internal enum SettingsPage { General, AzureDevOps, About }
+internal enum SettingsPage { General, QrLinks, AzureDevOps, About }
 
 internal sealed partial class SettingsWindow : FluentWindow, INavigationViewPageProvider
 {
@@ -16,6 +16,7 @@ internal sealed partial class SettingsWindow : FluentWindow, INavigationViewPage
     private readonly bool preview;
     private readonly Func<string, bool> credentialExists;
     private readonly GeneralPage general = new();
+    private readonly QrLinksPage qr = new();
     private readonly AzureDevOpsPage azure = new();
     private readonly AboutPage about = new();
     private readonly DispatcherTimer delaySave = new() { Interval = TimeSpan.FromMilliseconds(400) };
@@ -38,6 +39,9 @@ internal sealed partial class SettingsWindow : FluentWindow, INavigationViewPage
         else Wpf.Ui.Appearance.SystemThemeWatcher.Watch(this);
 
         general.Delay.Value = settings.DelayMs; general.DelayValue.Text = $"{settings.DelayMs} ms";
+        qr.Enabled.IsChecked = settings.QrEnabled; qr.Grab.IsChecked = settings.GrabEnabled; qr.AnyOther.IsChecked = settings.AnyOtherLinkQr;
+        azure.PrCard.IsChecked = settings.PrCardEnabled;
+        RenderPatterns(); UpdateQrState();
         general.Alt.IsChecked = settings.AltHover;
         azure.Skip.IsChecked = settings.SkipConfirmation; azure.Notify.IsChecked = settings.SuccessNotification;
         azure.Organization.Text = settings.Organization;
@@ -59,6 +63,14 @@ internal sealed partial class SettingsWindow : FluentWindow, INavigationViewPage
             settings.DelayMs = (int)e.NewValue; delaySave.Stop(); delaySave.Start();
         };
         delaySave.Tick += (_, _) => { delaySave.Stop(); Persist(() => { }, general.Status); };
+        qr.Enabled.Click += (_, _) => { Persist(() => settings.QrEnabled = qr.Enabled.IsChecked == true, qr.Status); UpdateQrState(); };
+        qr.Grab.Click += (_, _) => Persist(() => settings.GrabEnabled = qr.Grab.IsChecked == true, qr.Status);
+        qr.AnyOther.Click += (_, _) => { Persist(() => settings.AnyOtherLinkQr = qr.AnyOther.IsChecked == true, qr.Status); UpdateTestResult(); };
+        qr.AddPattern.Click += (_, _) => AddPattern();
+        qr.NewPattern.KeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Enter) AddPattern(); };
+        qr.NewPattern.TextChanged += (_, _) => qr.PatternError.Visibility = Visibility.Collapsed;
+        qr.TestLink.TextChanged += (_, _) => UpdateTestResult();
+        azure.PrCard.Click += (_, _) => Persist(() => settings.PrCardEnabled = azure.PrCard.IsChecked == true, azure.Status);
         azure.Skip.Click += (_, _) => Persist(() => settings.SkipConfirmation = azure.Skip.IsChecked == true, azure.Status);
         azure.Notify.Click += (_, _) => Persist(() => settings.SuccessNotification = azure.Notify.IsChecked == true, azure.Status);
         azure.Organization.TextChanged += (_, _) => { azure.Token.Clear(); UpdateCredential(); };
@@ -92,7 +104,7 @@ internal sealed partial class SettingsWindow : FluentWindow, INavigationViewPage
     }
 
     object? INavigationViewPageProvider.GetPage(Type pageType) =>
-        pageType == typeof(GeneralPage) ? general : pageType == typeof(AzureDevOpsPage) ? azure :
+        pageType == typeof(GeneralPage) ? general : pageType == typeof(QrLinksPage) ? qr : pageType == typeof(AzureDevOpsPage) ? azure :
         pageType == typeof(AboutPage) ? about : null;
 
     public void ShowPage(SettingsPage page)
@@ -101,6 +113,7 @@ internal sealed partial class SettingsWindow : FluentWindow, INavigationViewPage
         if (!IsLoaded) return;
         Navigation.Navigate(page switch
         {
+            SettingsPage.QrLinks => typeof(QrLinksPage),
             SettingsPage.AzureDevOps => typeof(AzureDevOpsPage),
             SettingsPage.About => typeof(AboutPage),
             _ => typeof(GeneralPage)
@@ -109,7 +122,7 @@ internal sealed partial class SettingsWindow : FluentWindow, INavigationViewPage
 
     internal FrameworkElement Page(SettingsPage page) => page switch
     {
-        SettingsPage.AzureDevOps => azure, SettingsPage.About => about, _ => general
+        SettingsPage.QrLinks => qr, SettingsPage.AzureDevOps => azure, SettingsPage.About => about, _ => general
     };
 
     internal AzureDevOpsPage AzurePage => azure;
@@ -127,6 +140,53 @@ internal sealed partial class SettingsWindow : FluentWindow, INavigationViewPage
         try { settings.Save(); status.IsOpen = false; }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         { Show(status, InfoBarSeverity.Error, "Could not save settings. Check access to %LOCALAPPDATA%\\LinkPeek."); }
+    }
+
+    private void UpdateQrState() => qr.Options.IsEnabled = qr.Enabled.IsChecked == true;
+
+    private void AddPattern()
+    {
+        var pattern = LinkPattern.Normalize(qr.NewPattern.Text);
+        string? error = pattern is null ? "Enter a pattern like github.com/your-org/*"
+            : pattern == LinkFilter.GrabPattern || settings.CustomPatterns.Contains(pattern) ? "That pattern is already covered" : null;
+        if (error is not null)
+        {
+            qr.PatternError.Text = error; qr.PatternError.Visibility = Visibility.Visible;
+            return;
+        }
+        Persist(() => settings.CustomPatterns.Add(pattern!), qr.Status);
+        qr.NewPattern.Clear();
+        RenderPatterns(); UpdateTestResult();
+    }
+
+    private void RenderPatterns()
+    {
+        qr.PatternList.Children.Clear();
+        foreach (var pattern in settings.CustomPatterns.ToList())
+        {
+            var row = new System.Windows.Controls.Grid { Margin = new Thickness(1, 2, 0, 2) };
+            row.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition());
+            row.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition { Width = GridLength.Auto });
+            row.Children.Add(new Wpf.Ui.Controls.TextBlock { Text = pattern, FontFamily = new System.Windows.Media.FontFamily("Consolas"), VerticalAlignment = VerticalAlignment.Center });
+            var remove = new Wpf.Ui.Controls.Button { Icon = new SymbolIcon { Symbol = SymbolRegular.Dismiss24 }, ToolTip = "Remove pattern" };
+            AutomationProperties.SetName(remove, $"Remove pattern {pattern}");
+            System.Windows.Controls.Grid.SetColumn(remove, 1);
+            remove.Click += (_, _) =>
+            {
+                Persist(() => settings.CustomPatterns.Remove(pattern), qr.Status);
+                RenderPatterns(); UpdateTestResult();
+            };
+            row.Children.Add(remove);
+            qr.PatternList.Children.Add(row);
+        }
+    }
+
+    private void UpdateTestResult()
+    {
+        var text = qr.TestLink.Text.Trim();
+        if (text.Length == 0) { qr.TestResult.Text = "See whether LinkPeek would show a QR card."; return; }
+        var link = WebLink.Parse(text.Contains("://") ? text : "https://" + text);
+        qr.TestResult.Text = link is not null && settings.LinkFilter.AllowsQr(link.Uri) ? "Shows QR" : "Ignored";
     }
 
     private void SetStartup()

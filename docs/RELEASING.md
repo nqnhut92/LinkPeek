@@ -7,12 +7,12 @@ One repository contains two native implementations. Build and validate each plat
 | Platform | Package | Checksum | Version source |
 | --- | --- | --- | --- |
 | macOS | `LinkPeek-0.2.0.zip` | `LinkPeek-0.2.0.zip.sha256` | Xcode project marketing version |
-| Windows x64 | `LinkPeek-Windows-0.1.1-win-x64.zip` | Same filename + `.sha256` | `Windows/LinkPeek.Windows/LinkPeek.Windows.csproj`, `Version` |
-| Windows ARM64 | `LinkPeek-Windows-0.1.1-win-arm64.zip` | Same filename + `.sha256` | Same Windows project |
+| Windows x64 | `LinkPeek-Windows-0.2.0-win-x64.zip` | Same filename + `.sha256` | `Windows/LinkPeek.Windows/LinkPeek.Windows.csproj`, `Version` |
+| Windows ARM64 | `LinkPeek-Windows-0.2.0-win-arm64.zip` | Same filename + `.sha256` | Same Windows project |
 
 Use platform-specific names so Windows packages cannot replace the Mac ZIP. A release can have all six files. GitHub's automatic Source code archives are not runnable applications.
 
-Windows is at version 0.1.1. Every push to `main` that passes the Windows workflow replaces the four `LinkPeek-Windows-0.1.1-*` files on release `v0.1.1` (the release must already exist; it is never created). Because those files change over time, `BUILD-INFO.txt` inside each ZIP records the exact source commit, and the checksum changes with every publish. Mac assets are never touched.
+Windows is at version 0.2.0. The Windows workflow runs only for pushes to `main` that touch Windows files (and for pull requests and manual runs); pushing a tag never starts it, because GitHub ignores `paths` filters for tags. Every such push that passes replaces the four `LinkPeek-Windows-0.2.0-*` files on release `v0.2.0` (the release must already exist; it is never created). Because those files change over time, `BUILD-INFO.txt` inside each ZIP records the exact source commit, and the checksum changes with every publish. Mac assets are never touched.
 
 The current macOS release is `v0.1.1`. Its tag predates the Windows port. If Windows packages are added to that release, **do not move or recreate the tag**: the Mac package still corresponds to that original tag, and the new Windows packages correspond to the selected workflow run's commit. `BUILD-INFO.txt` inside every Windows ZIP records that commit. Add a Windows section in the release notes with the build commit and validation status so users can distinguish them. For a single source tag covering both implementations, create a new release from a commit that contains both.
 

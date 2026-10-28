@@ -42,6 +42,14 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
                 <ui:NavigationViewItem
+                    x:Name="QrItem"
+                    Content="QR links"
+                    TargetPageType="{x:Type local:QrLinksPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="QrCode24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+                <ui:NavigationViewItem
                     x:Name="AzureItem"
                     Content="Azure DevOps"
                     TargetPageType="{x:Type local:AzureDevOpsPage}">
