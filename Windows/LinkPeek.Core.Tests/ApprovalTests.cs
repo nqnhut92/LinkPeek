@@ -37,6 +37,15 @@ public sealed class ApprovalTests
     }
 
     [Theory]
+    [InlineData("active", false, 0, "Active · Your vote: No vote")]
+    [InlineData("active", true, 0, "Draft · Your vote: No vote")]
+    [InlineData("completed", false, 10, "Completed · Your vote: Approved")]
+    [InlineData("abandoned", false, -5, "Abandoned · Your vote: Waiting for author")]
+    [InlineData("surprise", false, 42, "Unknown status · Your vote: Unknown")]
+    public void CaptionMatchesTheMacCard(string status, bool draft, int vote, string expected) =>
+        Assert.Equal(expected, State(vote: vote, status: status, draft: draft).Caption);
+
+    [Theory]
     [InlineData("b", 0, "active", false, "reviewer")]
     [InlineData("a", 10, "active", false, "reviewer")]
     [InlineData("a", 5, "active", false, "reviewer")]

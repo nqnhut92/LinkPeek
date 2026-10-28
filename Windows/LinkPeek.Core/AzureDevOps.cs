@@ -20,8 +20,14 @@ public sealed record Snapshot(PullRequest Pr, string ReviewerId, int Vote)
     public string? Head => Pr.LastMergeSourceCommit?.CommitId;
     public bool Eligible => Pr.Status == "active" && !Pr.IsDraft &&
         Head is { Length: 40 } head && head.All(Uri.IsHexDigit) && Vote is 0 or -5 or -10;
-    public string Caption => (Pr.Status == "active" && Pr.IsDraft ? "Draft" : Pr.Status) +
-        " · Your vote: " + (Vote switch
+    // Same wording as the macOS card: "Active · Your vote: No vote".
+    public string Caption => (Pr.Status switch
+        {
+            "active" => Pr.IsDraft ? "Draft" : "Active",
+            "completed" => "Completed",
+            "abandoned" => "Abandoned",
+            _ => "Unknown status"
+        }) + " · Your vote: " + (Vote switch
         {
             10 => "Approved", 5 => "Approved with suggestions", 0 => "No vote",
             -5 => "Waiting for author", -10 => "Rejected", _ => "Unknown"
