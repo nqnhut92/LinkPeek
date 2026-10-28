@@ -71,7 +71,6 @@ internal sealed partial class CardWindow : Window
                 SymbolRegular.Checkmark24, async () => await ApproveAsync(), true);
             approve.IsEnabled = false;
             AddAction("Refresh", SymbolRegular.ArrowClockwise24, async () => await RefreshAsync());
-            AddAction("Copy link", SymbolRegular.Copy24, () => Copy(false));
             if (preferences.SkipConfirmation) Warn(InfoBarSeverity.Warning, "Confirmation is off: Approve sends your vote after verification.");
         }
         if (previewSnapshot is not null) Render(previewSnapshot);
