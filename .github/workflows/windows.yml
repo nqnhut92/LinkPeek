@@ -19,6 +19,9 @@ permissions:
 jobs:
   desktop-checks:
     runs-on: windows-latest
+    permissions:
+      contents: read
+      checks: write
     defaults:
       run:
         working-directory: Windows
@@ -32,6 +35,14 @@ jobs:
         run: |
           dotnet run --project LinkPeek.DesktopChecks/LinkPeek.DesktopChecks.csproj --configuration Release -- artifacts/ui-previews
           if ($LASTEXITCODE -ne 0) { throw 'Windows desktop regression checks failed.' }
+      - name: TEMP dump previews
+        if: always()
+        shell: pwsh
+        working-directory: Windows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: ./dump.ps1
       - uses: actions/upload-artifact@v4
         if: always()
         with:

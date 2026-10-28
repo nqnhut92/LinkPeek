@@ -5,7 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     Title="LinkPeek"
-    Width="344"
+    Width="362"
     AllowsTransparency="True"
     Background="Transparent"
     FontFamily="Segoe UI Variable Text, Segoe UI"
@@ -21,9 +21,14 @@
     WindowStyle="None">
     <!--
         A popover like the macOS NSPopover: one rounded surface with an arrow that points at the
-        hovered link. The outer margin is room for the drop shadow; a 9 px row above and below the card is reserved for the arrow, which is shown on the side facing the link, and CardWindow.Reposition moves it under the pointer.
+        hovered link. The outer margin is room for the drop shadow; a 9 px band on every side of the card is reserved for the arrow, which is shown on the side facing the link, and CardWindow.Reposition moves it under the pointer.
     -->
     <Grid x:Name="Root" Margin="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="9" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="9" />
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="9" />
             <RowDefinition Height="Auto" />
@@ -32,6 +37,7 @@
         <Border
             x:Name="Surface"
             Grid.Row="1"
+            Grid.Column="1"
             Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
             BorderBrush="{DynamicResource SurfaceStrokeColorFlyoutBrush}"
             BorderThickness="1"
@@ -110,6 +116,7 @@
         <Path
             x:Name="ArrowTop"
             Grid.Row="0"
+            Grid.Column="1"
             Width="18"
             Height="9"
             Margin="0,0,0,-1"
@@ -123,6 +130,7 @@
         <Path
             x:Name="ArrowBottom"
             Grid.Row="2"
+            Grid.Column="1"
             Width="18"
             Height="9"
             Margin="0,-1,0,0"
@@ -130,6 +138,36 @@
             VerticalAlignment="Top"
             Panel.ZIndex="1"
             Data="M0,0 L9,9 L18,0"
+            Fill="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
+            Stroke="{DynamicResource SurfaceStrokeColorFlyoutBrush}"
+            StrokeThickness="1"
+            Visibility="Hidden" />
+        <Path
+            x:Name="ArrowLeft"
+            Grid.Row="1"
+            Grid.Column="0"
+            Width="9"
+            Height="18"
+            Margin="0,0,-1,0"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Panel.ZIndex="1"
+            Data="M9,0 L0,9 L9,18"
+            Fill="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
+            Stroke="{DynamicResource SurfaceStrokeColorFlyoutBrush}"
+            StrokeThickness="1"
+            Visibility="Hidden" />
+        <Path
+            x:Name="ArrowRight"
+            Grid.Row="1"
+            Grid.Column="2"
+            Width="9"
+            Height="18"
+            Margin="-1,0,0,0"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Top"
+            Panel.ZIndex="1"
+            Data="M0,0 L9,9 L0,18"
             Fill="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
             Stroke="{DynamicResource SurfaceStrokeColorFlyoutBrush}"
             StrokeThickness="1"

@@ -71,6 +71,9 @@ internal static class UiPreview
             var work = System.Windows.Forms.Screen.PrimaryScreen!.WorkingArea;
             Card(Placed(web, new System.Drawing.Rectangle(work.Left + 220, work.Top + 80, 170, 18)), "card-qr-below-link");
             Card(Placed(web, new System.Drawing.Rectangle(work.Left + 220, work.Bottom - 50, 170, 18)), "card-qr-above-link");
+            var besideCard = Placed(web, new System.Drawing.Rectangle(work.Left + 220, work.Top + 250, 170, 18));
+            besideCard.WorkAreaOverride = new System.Drawing.Rectangle(work.Left, work.Top, work.Width, 520);
+            Card(besideCard, "card-qr-beside-link");
 
             var open = new OpenLinkWindow(); Open(open); open.PreviewInvalid("ftp://example.org"); Pump();
             Capture(open, theme, "open-link"); open.Close();
@@ -223,24 +226,35 @@ internal static class UiPreview
         var work = System.Windows.Forms.Screen.PrimaryScreen!.WorkingArea;
         var link = WebLink.Parse("https://example.org/placement")!;
         var report = new List<string>();
-        void Check(string name, System.Drawing.Rectangle anchor, bool expectBelow)
+        void Check(string name, System.Drawing.Rectangle anchor, ArrowSide[] expected, System.Drawing.Rectangle? area = null)
         {
-            var card = new CardWindow(link, null, null, new Preferences(), false, () => { }, () => { });
+            var card = new CardWindow(link, null, null, new Preferences(), false, () => { }, () => { }) { WorkAreaOverride = area };
             card.Place(anchor, new System.Drawing.Point(anchor.Left + Math.Min(40, anchor.Width / 2), anchor.Top + anchor.Height / 2));
             card.ShowActivated = false; card.Show(); Pump(TimeSpan.FromMilliseconds(300));
-            var bounds = card.ScreenBounds; var (top, bottom) = card.Arrows;
+            var bounds = card.ScreenBounds; var arrow = card.Arrow; var screen = area ?? work;
             card.Close();
-            report.Add($"{name}: card {bounds}, anchor {anchor}, arrow top={top} bottom={bottom}");
+            report.Add($"{name}: card {bounds}, anchor {anchor}, arrow {arrow}");
             if (bounds.IntersectsWith(anchor)) throw new InvalidOperationException("Card covers its link. " + report[^1]);
-            if (bounds.Left < work.Left || bounds.Right > work.Right || bounds.Top < work.Top || bounds.Bottom > work.Bottom)
+            if (bounds.Left < screen.Left || bounds.Right > screen.Right || bounds.Top < screen.Top || bounds.Bottom > screen.Bottom)
                 throw new InvalidOperationException("Card leaves the work area. " + report[^1]);
-            if (expectBelow ? !top || bottom || bounds.Top < anchor.Bottom : top || !bottom || bounds.Bottom > anchor.Top)
+            var onSide = arrow switch
+            {
+                ArrowSide.Top => bounds.Top >= anchor.Bottom,
+                ArrowSide.Bottom => bounds.Bottom <= anchor.Top,
+                ArrowSide.Left => bounds.Left >= anchor.Right,
+                ArrowSide.Right => bounds.Right <= anchor.Left,
+                _ => false
+            };
+            if (!expected.Contains(arrow) || !onSide)
                 throw new InvalidOperationException("Card or arrow is on the wrong side of the link. " + report[^1]);
         }
-        Check("below", new System.Drawing.Rectangle(work.Left + 200, work.Top + 60, 160, 18), true);
-        Check("above", new System.Drawing.Rectangle(work.Left + 200, work.Bottom - 50, 160, 18), false);
-        Check("right edge", new System.Drawing.Rectangle(work.Right - 40, work.Top + 60, 36, 18), true);
-        Check("left edge", new System.Drawing.Rectangle(work.Left + 2, work.Top + 60, 36, 18), true);
+        var shortScreen = new System.Drawing.Rectangle(work.Left, work.Top, work.Width, 520);
+        Check("below", new System.Drawing.Rectangle(work.Left + 200, work.Top + 60, 160, 18), [ArrowSide.Top]);
+        Check("above", new System.Drawing.Rectangle(work.Left + 200, work.Bottom - 50, 160, 18), [ArrowSide.Bottom]);
+        Check("right edge", new System.Drawing.Rectangle(work.Right - 40, work.Top + 60, 36, 18), [ArrowSide.Top]);
+        Check("left edge", new System.Drawing.Rectangle(work.Left + 2, work.Top + 60, 36, 18), [ArrowSide.Top]);
+        // A short screen has room neither above nor below the link: the card goes beside it.
+        Check("beside", new System.Drawing.Rectangle(work.Left + 200, work.Top + 250, 160, 18), [ArrowSide.Left, ArrowSide.Right], shortScreen);
         return string.Join("; ", report);
     }
 

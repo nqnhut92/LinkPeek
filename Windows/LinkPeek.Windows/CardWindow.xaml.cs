@@ -226,9 +226,12 @@ internal sealed partial class CardWindow : Window
         }
     }
 
-    internal (bool Top, bool Bottom) Arrows => (ArrowTop.Visibility == Visibility.Visible, ArrowBottom.Visibility == Visibility.Visible);
+    internal ArrowSide Arrow { get; private set; }
 
-    private const double ShadowMargin = 16, ArrowInset = 22, ScreenGap = 6;
+    // Lets desktop checks simulate a short screen; normal use reads the pointer's monitor.
+    internal Drawing.Rectangle? WorkAreaOverride { get; set; }
+
+    private const double ShadowMargin = 16, Band = 9, ArrowInset = 22, ScreenGap = 6;
     private double Scale => VisualTreeHelper.GetDpi(this).DpiScaleX;
 
     public void Place(Drawing.Rectangle anchor, Drawing.Point point)
@@ -240,31 +243,31 @@ internal sealed partial class CardWindow : Window
         SetWindowPos(handle, IntPtr.Zero, point.X, this.anchor.Bottom, 0, 0, NoSize | NoZOrder | NoActivate);
     }
 
-    // The arrow tip touches the link under the pointer. The card prefers to sit below the link,
-    // flips above when it does not fit, and is shifted to stay on screen without detaching the arrow.
+    // The arrow tip touches the link. PopoverPlacement picks below, above or beside the link (or
+    // the pointer) so that the card stays on screen without detaching from it.
     private void Reposition()
     {
         if (!placed) return;
         var current = ScreenBounds;
         if (current.IsEmpty) return;
-        var work = System.Windows.Forms.Screen.FromPoint(pointer).WorkingArea;
         var scale = Scale;
+        var work = WorkAreaOverride ?? System.Windows.Forms.Screen.FromPoint(pointer).WorkingArea;
+        var layout = PopoverPlacement.Compute(anchor, pointer, work, current.Size,
+            gap: (int)Math.Round(ScreenGap * scale), band: (int)Math.Round(Band * scale), inset: (int)Math.Round(ArrowInset * scale));
+        Arrow = layout.Arrow;
+        ArrowTop.Visibility = layout.Arrow == ArrowSide.Top ? Visibility.Visible : Visibility.Hidden;
+        ArrowBottom.Visibility = layout.Arrow == ArrowSide.Bottom ? Visibility.Visible : Visibility.Hidden;
+        ArrowLeft.Visibility = layout.Arrow == ArrowSide.Left ? Visibility.Visible : Visibility.Hidden;
+        ArrowRight.Visibility = layout.Arrow == ArrowSide.Right ? Visibility.Visible : Visibility.Hidden;
+        // Offsets are measured from the popover edge; arrows are laid out inside the 9 px bands.
+        var along = layout.ArrowOffset / scale;
+        ArrowTop.Margin = new Thickness(along - Band - ArrowTop.Width / 2, 0, 0, -1);
+        ArrowBottom.Margin = new Thickness(along - Band - ArrowBottom.Width / 2, -1, 0, 0);
+        ArrowLeft.Margin = new Thickness(0, along - Band - ArrowLeft.Height / 2, -1, 0);
+        ArrowRight.Margin = new Thickness(-1, along - Band - ArrowRight.Height / 2, 0, 0);
         var inset = ShadowMargin * scale;
-        var width = current.Width; var height = current.Height; // card plus arrow
-        var tipX = anchor.Width <= 1 ? pointer.X : Math.Clamp(pointer.X, anchor.Left, Math.Max(anchor.Left, anchor.Right - 1));
-        var x = Math.Clamp(tipX - width / 2, work.Left + ScreenGap, Math.Max(work.Left + ScreenGap, work.Right - ScreenGap - width));
-        var below = anchor.Bottom + height <= work.Bottom - ScreenGap;
-        var above = anchor.Top - height >= work.Top + ScreenGap;
-        var showBelow = below || !above;
-        var y = showBelow ? anchor.Bottom : anchor.Top - height;
-        var attached = below || above;
-        if (!attached) y = Math.Clamp(y, work.Top, Math.Max(work.Top, work.Bottom - height));
-        ArrowTop.Visibility = attached && showBelow ? Visibility.Visible : Visibility.Hidden;
-        ArrowBottom.Visibility = attached && !showBelow ? Visibility.Visible : Visibility.Hidden;
-        var arrow = attached && showBelow ? ArrowTop : ArrowBottom;
-        var offset = Math.Clamp((tipX - x) / scale, ArrowInset, Math.Max(ArrowInset, width / scale - ArrowInset));
-        arrow.Margin = new Thickness(offset - arrow.Width / 2, arrow.Margin.Top, 0, arrow.Margin.Bottom);
-        SetWindowPos(new WindowInteropHelper(this).Handle, IntPtr.Zero, (int)Math.Round(x - inset), (int)Math.Round(y - inset), 0, 0, NoSize | NoZOrder | NoActivate);
+        SetWindowPos(new WindowInteropHelper(this).Handle, IntPtr.Zero,
+            (int)Math.Round(layout.Location.X - inset), (int)Math.Round(layout.Location.Y - inset), 0, 0, NoSize | NoZOrder | NoActivate);
     }
 
     protected override void OnSourceInitialized(EventArgs e)
