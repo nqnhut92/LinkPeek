@@ -22,9 +22,17 @@ public static class PopoverPlacement
     /// <param name="size">Popover size including the arrow bands on every side.</param>
     /// <param name="gap">Minimum distance kept from the work area edge.</param>
     /// <param name="band">Thickness of the arrow band; arrows keep at least this plus <paramref name="inset"/> from the corners.</param>
+    /// <param name="tipGap">Space left between the arrow tip and the link so the tip never touches its text.</param>
+    /// <param name="lineHeight">A link taller than this (a URL that wraps, or a clipped multi-line link whose
+    /// accessibility rectangle is larger than what is visible) is narrowed to the line under the pointer.</param>
     public static PopoverLayout Compute(Rectangle anchor, Point pointer, Rectangle work, Size size,
-        int gap = 6, int band = 9, int inset = 22)
+        int gap = 6, int band = 9, int inset = 22, int tipGap = 4, int lineHeight = 28)
     {
+        if (anchor.Height > lineHeight)
+        {
+            var top = Math.Clamp(pointer.Y - lineHeight / 2, anchor.Top, anchor.Bottom - lineHeight);
+            anchor = new Rectangle(anchor.Left, top, anchor.Width, lineHeight);
+        }
         var tipX = anchor.Width <= 1 ? pointer.X : Math.Clamp(pointer.X, anchor.Left, Math.Max(anchor.Left, anchor.Right - 1));
         var tipY = anchor.Height <= 1 ? pointer.Y : Math.Clamp(pointer.Y, anchor.Top, Math.Max(anchor.Top, anchor.Bottom - 1));
         int Across(int tip, int length, int low, int high) =>
@@ -32,19 +40,19 @@ public static class PopoverPlacement
         int Offset(int tip, int start, int length) =>
             Math.Clamp(tip - start, band + inset, Math.Max(band + inset, length - band - inset));
 
-        var below = anchor.Bottom + size.Height <= work.Bottom - gap;
-        var above = anchor.Top - size.Height >= work.Top + gap;
+        var below = anchor.Bottom + tipGap + size.Height <= work.Bottom - gap;
+        var above = anchor.Top - tipGap - size.Height >= work.Top + gap;
         if (below || above)
         {
             var x = Across(tipX, size.Width, work.Left, work.Right);
             return below
-                ? new(new Point(x, anchor.Bottom), ArrowSide.Top, Offset(tipX, x, size.Width))
-                : new(new Point(x, anchor.Top - size.Height), ArrowSide.Bottom, Offset(tipX, x, size.Width));
+                ? new(new Point(x, anchor.Bottom + tipGap), ArrowSide.Top, Offset(tipX, x, size.Width))
+                : new(new Point(x, anchor.Top - tipGap - size.Height), ArrowSide.Bottom, Offset(tipX, x, size.Width));
         }
 
         // Beside the link, then beside the pointer. A wide link (a whole chat line) may leave no
         // room at its ends, but there is usually room next to where the pointer is.
-        foreach (var (rightX, leftX) in new[] { (anchor.Right + 2, anchor.Left - 2 - size.Width), (pointer.X + 8, pointer.X - 8 - size.Width) })
+        foreach (var (rightX, leftX) in new[] { (anchor.Right + tipGap, anchor.Left - tipGap - size.Width), (pointer.X + 8 + tipGap, pointer.X - 8 - tipGap - size.Width) })
         {
             var right = rightX + size.Width <= work.Right - gap;
             var left = leftX >= work.Left + gap;

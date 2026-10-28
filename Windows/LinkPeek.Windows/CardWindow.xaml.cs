@@ -74,7 +74,9 @@ internal sealed partial class CardWindow : Window
             if (preferences.SkipConfirmation) Warn(InfoBarSeverity.Warning, "Confirmation is off: Approve sends your vote after verification.");
         }
         if (previewSnapshot is not null) Render(previewSnapshot);
-        SizeChanged += (_, _) => Reposition();
+        // Root is laid out before the HWND is resized; place from its layout size, and once more after render.
+        Root.SizeChanged += (_, _) => Reposition();
+        ContentRendered += (_, _) => Reposition();
         ContentRendered += async (_, _) => { if (link.PullRequest is not null && previewSnapshot is null) await RefreshAsync(); };
         Closed += (_, _) => { IsClosed = true; lifetime.Cancel(); };
     }
@@ -221,8 +223,10 @@ internal sealed partial class CardWindow : Window
         get
         {
             if (!GetWindowRect(new WindowInteropHelper(this).Handle, out var r)) return default;
-            var inset = (int)Math.Round(ShadowMargin * Scale);
-            return Drawing.Rectangle.FromLTRB(r.Left + inset, r.Top + inset, r.Right - inset, r.Bottom - inset);
+            var scale = Scale; var inset = (int)Math.Round(ShadowMargin * scale);
+            // Size comes from layout: a SizeToContent window's HWND can briefly report its old size.
+            return new Drawing.Rectangle(r.Left + inset, r.Top + inset,
+                (int)Math.Round(Root.ActualWidth * scale), (int)Math.Round(Root.ActualHeight * scale));
         }
     }
 
@@ -231,7 +235,7 @@ internal sealed partial class CardWindow : Window
     // Lets desktop checks simulate a short screen; normal use reads the pointer's monitor.
     internal Drawing.Rectangle? WorkAreaOverride { get; set; }
 
-    private const double ShadowMargin = 16, Band = 9, ArrowInset = 22, ScreenGap = 6;
+    private const double ShadowMargin = 16, Band = 9, ArrowInset = 22, ScreenGap = 6, TipGap = 4, LineHeight = 28;
     private double Scale => VisualTreeHelper.GetDpi(this).DpiScaleX;
 
     public void Place(Drawing.Rectangle anchor, Drawing.Point point)
@@ -253,7 +257,8 @@ internal sealed partial class CardWindow : Window
         var scale = Scale;
         var work = WorkAreaOverride ?? System.Windows.Forms.Screen.FromPoint(pointer).WorkingArea;
         var layout = PopoverPlacement.Compute(anchor, pointer, work, current.Size,
-            gap: (int)Math.Round(ScreenGap * scale), band: (int)Math.Round(Band * scale), inset: (int)Math.Round(ArrowInset * scale));
+            gap: (int)Math.Round(ScreenGap * scale), band: (int)Math.Round(Band * scale), inset: (int)Math.Round(ArrowInset * scale),
+            tipGap: (int)Math.Round(TipGap * scale), lineHeight: (int)Math.Round(LineHeight * scale));
         Arrow = layout.Arrow;
         ArrowTop.Visibility = layout.Arrow == ArrowSide.Top ? Visibility.Visible : Visibility.Hidden;
         ArrowBottom.Visibility = layout.Arrow == ArrowSide.Bottom ? Visibility.Visible : Visibility.Hidden;
