@@ -87,7 +87,7 @@ internal static class LinkInspector
             if (ReadMsaa(point, foreground) is { } accessibleLink) return accessibleLink;
         }
         catch (Exception e) when (e is ElementNotAvailableException or InvalidOperationException or
-            UnauthorizedAccessException or COMException) { }
+            UnauthorizedAccessException or COMException or System.ComponentModel.Win32Exception) { }
         return null;
     }
 
