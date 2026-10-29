@@ -20,12 +20,19 @@ internal sealed partial class CardWindow : Window
     private readonly Action notify;
     private Snapshot? snapshot;
     private BitmapSource? qrImage;
-    private Wpf.Ui.Controls.Button? approve;
+    private PrDisplayState state = PrDisplayState.Loading;
+    private string? error;
+    private Approval? confirmation;
     private Drawing.Rectangle anchor;
     private Drawing.Point pointer;
     private bool placed;
     private bool busy;
     public bool Busy => busy;
+    /// <summary>True while an approval is running or waiting for its confirmation click; the card must stay.</summary>
+    public bool Pinned => busy || confirmation is not null;
+    /// <summary>Keeps the card up for a moment after a successful approval, like the macOS card.</summary>
+    public DateTime ResultUntil { get; private set; } = DateTime.MinValue;
+    public Action? OpenSettings { get; set; }
     public bool IsClosed { get; private set; }
 
     // With PR cards switched off, pull request links get the same QR card as any other link.
@@ -38,47 +45,39 @@ internal sealed partial class CardWindow : Window
         this.preferences = preferences; this.copied = copied; this.notify = notify;
         InitializeComponent();
         ShowActivated = false; // Hover cards close by moving away or Esc.
-        Caption.Text = Pr is { } shown ? $"PULL REQUEST · #{shown.Id}" : "LINK QR";
-        Heading.Text = Pr is { } pr ? $"Pull request #{pr.Id}" : link.Uri.Host;
-        if (Pr is null)
-            Detail(null, link.Text.Length > 120 ? link.Text[..120] + "…" : link.Text, caption: true);
+        if (Pr is null) BuildQr();
         else
         {
-            Detail(SymbolRegular.Globe24, link.Uri.Host);
-            Detail(SymbolRegular.Link24, link.Text.Length > 120 ? link.Text[..120] + "…" : link.Text, caption: true);
+            if (previewSnapshot is not null) { snapshot = previewSnapshot; state = PrDisplay.Resolve(previewSnapshot, null); }
+            RenderPr();
         }
-        if (Pr is null)
-        {
-            AddAction("Copy link", SymbolRegular.Copy24, () => Copy(false), true);
-            try
-            {
-                using var data = QRCodeGenerator.GenerateQrCode(link.Text, QRCodeGenerator.ECCLevel.M);
-                Qr.Source = QrDrawing(data);
-                using var png = new PngByteQRCode(data);
-                using var stream = new MemoryStream(png.GetGraphic(8));
-                qrImage = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
-                qrImage.Freeze();
-                QrFrame.Visibility = Visibility.Visible;
-                Status("Scan to open · Generated on your device");
-                AddAction("Copy QR", SymbolRegular.QrCode24, () => Copy(true));
-            }
-            catch (Exception e) when (e is QRCoder.Exceptions.DataTooLongException or ArgumentException)
-            { Warn(InfoBarSeverity.Warning, "This URL is too large for a QR code. Copy link is still available."); }
-        }
-        else
-        {
-            approve = AddAction(preferences.SkipConfirmation ? "Approve immediately" : "Approve…",
-                SymbolRegular.Checkmark24, async () => await ApproveAsync(), true);
-            approve.IsEnabled = false;
-            AddAction("Refresh", SymbolRegular.ArrowClockwise24, async () => await RefreshAsync());
-            if (preferences.SkipConfirmation) Warn(InfoBarSeverity.Warning, "Confirmation is off: Approve sends your vote after verification.");
-        }
-        if (previewSnapshot is not null) Render(previewSnapshot);
         // Root is laid out before the HWND is resized; place from its layout size, and once more after render.
         Root.SizeChanged += (_, _) => Reposition();
         ContentRendered += (_, _) => Reposition();
-        ContentRendered += async (_, _) => { if (Pr is not null && previewSnapshot is null) await RefreshAsync(); };
+        ContentRendered += async (_, _) => { if (Pr is not null && previewSnapshot is null) await LoadAsync(); };
         Closed += (_, _) => { IsClosed = true; lifetime.Cancel(); };
+    }
+
+    private void BuildQr()
+    {
+        Caption.Text = "LINK QR";
+        Heading.Text = link.Uri.Host;
+        Detail(null, link.Text.Length > 120 ? link.Text[..120] + "…" : link.Text, caption: true);
+        var buttons = new List<ActionSpec> { new("Copy Link", SymbolRegular.Copy24, () => Copy(false), true) };
+        try
+        {
+            using var data = QRCodeGenerator.GenerateQrCode(link.Text, QRCodeGenerator.ECCLevel.M);
+            Qr.Source = QrDrawing(data);
+            using var png = new PngByteQRCode(data);
+            using var stream = new MemoryStream(png.GetGraphic(8));
+            qrImage = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+            qrImage.Freeze();
+            QrFrame.Visibility = Visibility.Visible;
+            buttons.Add(new("Copy QR", SymbolRegular.QrCode24, () => Copy(true), false));
+        }
+        catch (Exception e) when (e is QRCoder.Exceptions.DataTooLongException or ArgumentException)
+        { Warn(InfoBarSeverity.Warning, "This link is too long to encode."); }
+        SetActions(equal: true, buttons.ToArray());
     }
 
     // QR modules drawn as vector rectangles stay sharp at every display scale.
@@ -116,22 +115,37 @@ internal sealed partial class CardWindow : Window
         row.Children.Add(label); Details.Children.Add(row);
     }
 
-    private void Status(string text)
-    {
-        StatusText.Text = text; StatusText.Visibility = text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
-    }
-
     private void Warn(InfoBarSeverity severity, string message)
     {
         Notice.Severity = severity; Notice.Message = message; Notice.IsOpen = message.Length > 0;
     }
 
-    private Wpf.Ui.Controls.Button AddAction(string text, SymbolRegular symbol, Action action, bool primary = false)
+    private sealed record ActionSpec(string Text, SymbolRegular? Symbol, Action? Click, bool Primary, bool Enabled = true);
+
+    // One full-width action like the macOS card; the confirmation step adds a Cancel button beside it.
+    private void SetActions(bool equal, params ActionSpec[] specs)
     {
-        var button = new Wpf.Ui.Controls.Button { Content = text, Icon = new SymbolIcon { Symbol = symbol },
-            Appearance = primary ? ControlAppearance.Primary : ControlAppearance.Secondary, Margin = new Thickness(0, 4, 8, 0) };
-        button.Click += (_, _) => action();
-        Actions.Children.Add(button); return button;
+        Actions.Children.Clear(); Actions.ColumnDefinitions.Clear();
+        for (var i = 0; i < specs.Length; i++)
+        {
+            var spec = specs[i];
+            Actions.ColumnDefinitions.Add(new System.Windows.Controls.ColumnDefinition
+            {
+                Width = equal || i == 0 ? new GridLength(1, GridUnitType.Star) : GridLength.Auto,
+                MinWidth = i == 0 ? 0 : 84
+            });
+            var button = new Wpf.Ui.Controls.Button
+            {
+                Content = spec.Text, IsEnabled = spec.Enabled,
+                Appearance = spec.Primary ? ControlAppearance.Primary : ControlAppearance.Secondary,
+                HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(i == 0 ? 0 : 8, 0, 0, 0)
+            };
+            if (spec.Symbol is { } symbol) button.Icon = new SymbolIcon { Symbol = symbol };
+            if (spec.Click is { } click) button.Click += (_, _) => click();
+            System.Windows.Controls.Grid.SetColumn(button, i);
+            Actions.Children.Add(button);
+        }
     }
 
     private void Copy(bool image)
@@ -142,76 +156,114 @@ internal sealed partial class CardWindow : Window
             else Clipboard.SetText(link.Text);
             copied(); Close();
         }
-        catch (ExternalException) { Status("Clipboard is busy. Try again."); }
+        catch (ExternalException) { Warn(InfoBarSeverity.Warning, image ? "Could not copy image." : "Could not copy link."); }
     }
 
-    private void Render(Snapshot value)
+    // Same layout and wording as the macOS pull request card: caption, title, creator, repository,
+    // branches, one status line, an optional hint and a single action.
+    private void RenderPr()
     {
-        snapshot = value;
-        Caption.Text = $"PULL REQUEST · #{value.Pr.PullRequestId}";
-        Heading.Text = value.Pr.Title;
+        var pr = (confirmation?.Snapshot ?? snapshot)?.Pr;
+        var id = Pr!.Id;
+        Caption.Text = $"PULL REQUEST · #{id}";
+        Heading.Text = pr?.Title ?? (state == PrDisplayState.Loading ? "Loading pull request…" : Pr.Repository);
         Details.Children.Clear();
-        Detail(SymbolRegular.Person24, value.Pr.CreatedBy?.DisplayName ?? "Creator unavailable");
-        Detail(SymbolRegular.Folder24, value.Pr.Repository.Name);
-        Detail(SymbolRegular.BranchCompare24,
-            $"{value.Pr.SourceRefName?.Replace("refs/heads/", "")} → {value.Pr.TargetRefName?.Replace("refs/heads/", "")}");
-        var previous = approvals?.ReviewedHead(Pr!, value);
-        Status(value.Caption);
-        var warnings = new List<string>();
-        if (previous is not null && previous != value.Head) warnings.Add("New commits · Review changes before approving.");
-        if (preferences.SkipConfirmation && value.Eligible) warnings.Add("Confirmation is off: clicking Approve submits a vote.");
-        Warn(InfoBarSeverity.Warning, string.Join("\n", warnings));
-        if (approve is not null) approve.IsEnabled = value.Eligible && !busy;
+        Detail(SymbolRegular.Person24, pr?.CreatedBy?.DisplayName ?? "Creator unavailable");
+        Detail(SymbolRegular.Folder24, pr?.Repository.Name ?? Pr.Repository);
+        Detail(SymbolRegular.BranchCompare24, pr?.SourceRefName is { } source && pr.TargetRefName is { } target
+            ? $"{source.Replace("refs/heads/", "")} → {target.Replace("refs/heads/", "")}" : Pr.Project);
+        var shown = confirmation is not null ? "Approve this pull request?"
+            : state == PrDisplayState.Loading ? state.Label() : snapshot?.Caption ?? state.Label();
+        StatusText.Text = error ?? shown;
+        StatusText.FontWeight = confirmation is null ? FontWeights.Medium : FontWeights.SemiBold;
+        StatusText.SetResourceReference(ForegroundProperty, error is not null ? "SystemFillColorCriticalBrush"
+            : confirmation is not null ? "TextFillColorPrimaryBrush" : "TextFillColorSecondaryBrush");
+        StatusText.Visibility = Visibility.Visible;
+        HintText.Visibility = preferences.SkipConfirmation && confirmation is null && state.CanApprove() && !busy
+            ? Visibility.Visible : Visibility.Collapsed;
+
+        Action? click = confirmation is not null ? () => _ = ConfirmApprovalAsync()
+            : state.CanApprove() ? () => _ = ApproveAsync()
+            : state == PrDisplayState.Configure ? () => OpenSettings?.Invoke()
+            : state == PrDisplayState.Error ? () => _ = LoadAsync() : null;
+        var label = confirmation is not null ? "Confirm Approve" : state.CanApprove() ? "Approve"
+            : state == PrDisplayState.Error ? "Retry" : state.Label();
+        var symbol = state.CanApprove() || confirmation is not null ? SymbolRegular.Checkmark24
+            : state == PrDisplayState.Error ? SymbolRegular.ArrowClockwise24 : SymbolRegular.Info24;
+        var buttons = new List<ActionSpec> { new(label, symbol, click, true, click is not null && !busy) };
+        if (confirmation is not null) buttons.Add(new("Cancel", null, CancelConfirmation, false, !busy));
+        SetActions(equal: false, buttons.ToArray());
     }
 
-    private async Task RefreshAsync()
+    private async Task LoadAsync()
     {
-        if (busy || IsClosed) return;
-        busy = true; if (approve is not null) approve.IsEnabled = false;
+        var pr = Pr;
+        if (IsClosed || pr is null) return;
+        snapshot = null; error = null; state = PrDisplayState.Loading; RenderPr();
         try
         {
-            if (client is null || approvals is null) throw new UserError("Configure this organization and save a PAT in Settings.");
-            Status("Loading…");
-            var value = await client.SnapshotAsync(Pr!, lifetime.Token);
-            if (!IsClosed) Render(value);
+            if (preferences.Organization.Length == 0) throw new ConfigureException("Configure PAT");
+            if (!string.Equals(pr.Organization, preferences.Organization, StringComparison.OrdinalIgnoreCase))
+                throw new ConfigureException("Configure this organization");
+            if (client is null || approvals is null) throw new ConfigureException("Configure PAT");
+            var value = await client.SnapshotAsync(pr, lifetime.Token);
+            if (IsClosed) return;
+            snapshot = value; state = PrDisplay.Resolve(value, approvals.ReviewedHead(pr, value));
         }
-        catch (OperationCanceledException) { }
-        catch (Exception error) { if (!IsClosed) { snapshot = null; Status(""); Warn(InfoBarSeverity.Error, SafeMessage(error)); } }
-        finally
-        {
-            busy = false;
-            if (!IsClosed && approve is not null) approve.IsEnabled = snapshot?.Eligible == true;
-        }
+        catch (OperationCanceledException) { return; }
+        catch (ConfigureException e) { error = e.Message; state = PrDisplayState.Configure; }
+        catch (Exception e) { error = SafeMessage(e); state = PrDisplayState.Error; }
+        if (!IsClosed) RenderPr();
     }
+
+    private sealed class ConfigureException(string message) : Exception(message);
 
     private async Task ApproveAsync()
     {
-        if (busy || snapshot is null || approvals is null) return;
-        busy = true; approve!.IsEnabled = false;
+        var pr = Pr; var current = snapshot;
+        if (busy || pr is null || current is null || !current.Eligible || approvals is null) return;
+        busy = true; state = PrDisplayState.Loading; error = null; RenderPr();
         try
         {
-            Status("Checking current PR and commit…");
-            var prepared = await approvals.PrepareAsync(Pr!, snapshot, lifetime.Token);
+            var prepared = await approvals.PrepareAsync(pr, current, lifetime.Token);
             if (IsClosed) return;
-            if (!preferences.SkipConfirmation && !DialogWindow.Confirm(this, $"Approve PR #{snapshot.Pr.PullRequestId}?",
-                    $"{snapshot.Pr.Title}\n\nCommit {snapshot.Head}\n\n" +
-                    "LinkPeek will recheck this commit and your identity before submitting one vote.",
-                    "Approve", "Cancel"))
-            { Status("Approval cancelled."); return; }
-            Status("Approving and verifying…");
-            var verified = await approvals.ApproveAsync(prepared, lifetime.Token);
-            if (!IsClosed) { Render(verified); if (preferences.SuccessNotification) notify(); }
+            if (preferences.SkipConfirmation)
+            {
+                snapshot = await approvals.ApproveAsync(prepared, lifetime.Token);
+                Succeeded();
+            }
+            else { confirmation = prepared; snapshot = prepared.Snapshot; state = PrDisplayState.Approve; }
         }
-        catch (OperationCanceledException) { }
-        catch (Exception error)
-        {
-            if (!IsClosed) { snapshot = null; Status(""); Warn(InfoBarSeverity.Error, SafeMessage(error) + " Use Refresh before trying again."); }
-        }
-        finally
-        {
-            busy = false;
-            if (!IsClosed) approve.IsEnabled = snapshot?.Eligible == true;
-        }
+        catch (OperationCanceledException) { return; }
+        catch (Exception e) { state = PrDisplayState.Error; error = SafeMessage(e); }
+        finally { busy = false; }
+        if (!IsClosed) RenderPr();
+    }
+
+    private async Task ConfirmApprovalAsync()
+    {
+        var prepared = confirmation;
+        if (busy || prepared is null || approvals is null) return;
+        confirmation = null; busy = true; state = PrDisplayState.Loading; error = null; RenderPr();
+        try { snapshot = await approvals.ApproveAsync(prepared, lifetime.Token); Succeeded(); }
+        catch (OperationCanceledException) { return; }
+        catch (Exception e) { snapshot = null; state = PrDisplayState.Error; error = SafeMessage(e); }
+        finally { busy = false; }
+        if (!IsClosed) RenderPr();
+    }
+
+    private void CancelConfirmation()
+    {
+        confirmation = null;
+        if (snapshot is not null) state = PrDisplay.Resolve(snapshot, null);
+        RenderPr();
+    }
+
+    private void Succeeded()
+    {
+        state = PrDisplayState.Approved;
+        ResultUntil = DateTime.UtcNow.AddSeconds(3);
+        if (preferences.SuccessNotification) notify();
     }
 
     internal static string SafeMessage(Exception error) => error is UserError

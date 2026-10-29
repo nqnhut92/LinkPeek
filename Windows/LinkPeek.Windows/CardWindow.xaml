@@ -88,12 +88,20 @@
                     Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                     TextWrapping="Wrap"
                     Visibility="Collapsed" />
+                <ui:TextBlock
+                    x:Name="HintText"
+                    Margin="0,4,0,0"
+                    FontSize="12"
+                    FontWeight="Medium"
+                    Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                    Text="Click Approve to submit immediately."
+                    Visibility="Collapsed" />
                 <ui:InfoBar
                     x:Name="Notice"
                     Margin="0,10,0,0"
                     IsClosable="False"
                     IsOpen="False" />
-                <WrapPanel x:Name="Actions" Margin="0,12,0,0" />
+                <Grid x:Name="Actions" Margin="0,12,0,0" />
             </StackPanel>
         </Border>
         <!-- Open figures: only the two slanted edges are stroked, so the base blends into the surface. -->

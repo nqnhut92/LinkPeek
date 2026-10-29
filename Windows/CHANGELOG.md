@@ -7,6 +7,7 @@ Matches the macOS 0.2.0 hover changes.
 - New **QR links** page: a master switch, a built-in Grab links preset (`app.grab.com/s/*`), your own case-insensitive `*` patterns and a link tester. Other links no longer open a QR card unless **Show QR for any other link** is on.
 - The default hover delay is 800 ms and the slider covers 500–1500 ms. A one-time migration moves the old 500 ms default to 800 ms. Hover timing stays on the General page.
 - The tray menu now has only **Settings…** and **Quit LinkPeek**, like macOS. Open link…, Pause hover and About LinkPeek are removed.
+- The pull request card now works like the macOS card: it lists creator, repository and branches, confirms in the card (**Confirm Approve** / **Cancel**), shows **Retry** and **Configure PAT** states and no longer has a Refresh button. The QR card buttons are **Copy Link** and **Copy QR**.
 - Hover keeps working in other apps while Settings is open.
 - Hover falls back to MSAA when UI Automation is refused for a window (Access is denied).
 - **Azure DevOps → Show PR card on hover** turns pull request cards off; those links then follow the QR rules.

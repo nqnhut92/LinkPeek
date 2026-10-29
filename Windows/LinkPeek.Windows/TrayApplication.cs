@@ -143,6 +143,7 @@ internal sealed class TrayApplication : IDisposable
         var current = new CardWindow(link, client, approvals, preferences with { },
             () => suppressed = link.Text,
             () => tray.ShowBalloonTip(3000, "LinkPeek", "Azure DevOps verified your approval.", WinForms.ToolTipIcon.Info));
+        current.OpenSettings = () => OpenSettings(SettingsPage.AzureDevOps);
         card = current;
         current.Closed += (_, _) => { if (card == current) { card = null; gate.Reset(); } };
         current.Place(bounds, point); current.Show();
@@ -160,7 +161,7 @@ internal sealed class TrayApplication : IDisposable
         var foreground = Native.ForegroundProcess();
         if (card is { IsClosed: false })
         {
-            if (card.Busy || clock.Elapsed < captureUntil) return;
+            if (card.Pinned || clock.Elapsed < captureUntil || DateTime.UtcNow < card.ResultUntil) return;
             if (card.ScreenBounds.Contains(point) || (anchor.Contains(point) && foreground == anchorProcess))
             { outsideSince = TimeSpan.Zero; return; }
             if (outsideSince == TimeSpan.Zero) outsideSince = clock.Elapsed;
