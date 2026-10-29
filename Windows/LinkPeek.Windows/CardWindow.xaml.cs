@@ -38,7 +38,7 @@ internal sealed partial class CardWindow : Window
         this.preferences = preferences; this.copied = copied; this.notify = notify;
         InitializeComponent();
         ShowActivated = false; // Hover cards close by moving away or Esc.
-        Caption.Text = Pr is null ? "LINK QR" : "AZURE DEVOPS PULL REQUEST";
+        Caption.Text = Pr is { } shown ? $"PULL REQUEST · #{shown.Id}" : "LINK QR";
         Heading.Text = Pr is { } pr ? $"Pull request #{pr.Id}" : link.Uri.Host;
         if (Pr is null)
             Detail(null, link.Text.Length > 120 ? link.Text[..120] + "…" : link.Text, caption: true);
@@ -148,10 +148,11 @@ internal sealed partial class CardWindow : Window
     private void Render(Snapshot value)
     {
         snapshot = value;
-        Caption.Text = $"AZURE DEVOPS PULL REQUEST · #{value.Pr.PullRequestId}";
+        Caption.Text = $"PULL REQUEST · #{value.Pr.PullRequestId}";
         Heading.Text = value.Pr.Title;
         Details.Children.Clear();
-        Detail(SymbolRegular.Person24, value.Pr.CreatedBy?.DisplayName ?? "Unknown author");
+        Detail(SymbolRegular.Person24, value.Pr.CreatedBy?.DisplayName ?? "Creator unavailable");
+        Detail(SymbolRegular.Folder24, value.Pr.Repository.Name);
         Detail(SymbolRegular.BranchCompare24,
             $"{value.Pr.SourceRefName?.Replace("refs/heads/", "")} → {value.Pr.TargetRefName?.Replace("refs/heads/", "")}");
         var previous = approvals?.ReviewedHead(Pr!, value);
