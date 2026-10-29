@@ -108,7 +108,7 @@ internal static class UiPreview
         {
             var owner = TrayApplication.CreateMenuHost();
             owner.Left = 24; owner.Top = 24; owner.ShowActivated = false; owner.Show();
-            var menu = TrayApplication.CreateMenu(() => { }, () => { }, _ => { }, () => { }, () => { });
+            var menu = TrayApplication.CreateMenu(() => { }, () => { });
             menu.PlacementTarget = owner; menu.Placement = PlacementMode.Relative; menu.IsOpen = true;
             Pump(TimeSpan.FromSeconds(1)); // Let the Fluent open animation finish.
             // The popup root includes the menu's border and shadow margin.

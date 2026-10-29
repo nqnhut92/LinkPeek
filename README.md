@@ -15,7 +15,7 @@ The Windows portable package includes its .NET runtime and needs no installer or
 
 1. Open [Releases](https://github.com/nqnhut92/LinkPeek/releases) and expand **Assets**. Choose the Windows **x64** ZIP for Intel/AMD computers or **ARM64** for Windows on ARM. Do not download GitHub's automatic **Source code** ZIP to run the app.
 2. Extract the **entire** ZIP to a stable folder and run `LinkPeek.exe`. Keep the DLLs and runtime files beside it. The unsigned app may require company IT approval under application-control policy.
-3. Right-click its tray icon (possibly under hidden icons) for **Settings**, **Open link…**, **Pause hover** and **Quit**. QR generation works offline without a PAT. Optional Azure DevOps setup uses Windows Credential Manager.
+3. Right-click its tray icon (possibly under hidden icons) for **Settings…** and **Quit LinkPeek**. QR generation works offline without a PAT. Optional Azure DevOps setup uses Windows Credential Manager.
 4. To update, quit the app, extract the new package into a fresh folder and launch it. Re-enable launch at sign-in in Settings if you moved the executable. Settings and credentials remain under your Windows user account.
 
 If Windows assets are not published yet, download a completed build from [Actions → Windows](https://github.com/nqnhut92/LinkPeek/actions/workflows/windows.yml). GitHub requires sign-in to download Actions artifacts. Extract the downloaded artifact wrapper, then the application ZIP inside it. See [Windows instructions](Windows/README.md) for usage, checksums, limitations and troubleshooting, and the [release guide](docs/RELEASING.md) for adding Windows assets to an existing macOS release.

@@ -26,7 +26,6 @@ internal sealed class TrayApplication : IDisposable
     private Rectangle anchor;
     private uint anchorProcess;
     private string? suppressed;
-    private bool paused;
     private TimeSpan outsideSince;
     private TimeSpan captureUntil;
     private bool snipKeyWasDown;
@@ -39,8 +38,7 @@ internal sealed class TrayApplication : IDisposable
         App.InstallCrashGuards(NotifyRecovered);
         using (var stream = System.Windows.Application.GetResourceStream(App.Asset("LinkPeek.ico")).Stream)
             icon = new Icon(stream, WinForms.SystemInformation.SmallIconSize);
-        menu = CreateMenu(OpenLink, () => OpenSettings(),
-            value => { paused = value; CloseCard(); gate.Reset(); }, () => OpenSettings(SettingsPage.About), Quit);
+        menu = CreateMenu(() => OpenSettings(), Quit);
         // A WPF popup only dismisses on outside clicks when one of our windows is foreground,
         // so the tray menu opens from an invisible, off-screen owner window.
         menuHost = CreateMenuHost();
@@ -81,18 +79,12 @@ internal sealed class TrayApplication : IDisposable
         ResizeMode = System.Windows.ResizeMode.NoResize
     };
 
-    internal static System.Windows.Controls.ContextMenu CreateMenu(Action openLink, Action openSettings,
-        Action<bool> pauseChanged, Action about, Action quit)
+    // Same entries as the macOS status menu.
+    internal static System.Windows.Controls.ContextMenu CreateMenu(Action openSettings, Action quit)
     {
         var result = new System.Windows.Controls.ContextMenu { Placement = PlacementMode.MousePoint };
-        result.Items.Add(Item("Open link…", SymbolRegular.Open24, openLink));
-        result.Items.Add(Item("Settings", SymbolRegular.Settings24, openSettings));
-        var pause = new MenuItem { Header = "Pause hover", IsCheckable = true };
-        pause.Click += (_, _) => pauseChanged(pause.IsChecked);
-        result.Items.Add(pause);
-        result.Items.Add(new System.Windows.Controls.Separator());
-        result.Items.Add(Item("About LinkPeek", SymbolRegular.Info24, about));
-        result.Items.Add(Item("Quit", SymbolRegular.Power24, quit));
+        result.Items.Add(Item("Settings…", SymbolRegular.Settings24, openSettings));
+        result.Items.Add(Item("Quit LinkPeek", SymbolRegular.Power24, quit));
         return result;
     }
 
@@ -139,14 +131,6 @@ internal sealed class TrayApplication : IDisposable
         opened.Show(); opened.ShowPage(page); opened.Activate();
     }
 
-    private void OpenLink()
-    {
-        CloseCard(); gate.Reset(); App.FollowSystemTheme();
-        var dialog = new OpenLinkWindow();
-        if (dialog.ShowDialog() == true && dialog.Link is { } link)
-            ShowCard(link, Rectangle.Empty, WinForms.Cursor.Position, true);
-    }
-
     private void CloseCard()
     {
         var old = card; card = null; old?.Close();
@@ -171,7 +155,7 @@ internal sealed class TrayApplication : IDisposable
         var snip = (Native.KeyDown(0x5B) || Native.KeyDown(0x5C)) && Native.KeyDown(0x10) && Native.KeyDown(0x53);
         if (snip && !snipKeyWasDown && card is not null) captureUntil = clock.Elapsed + TimeSpan.FromSeconds(20);
         snipKeyWasDown = snip;
-        if (paused || menu.IsOpen || settings is { IsVisible: true }) return;
+        if (menu.IsOpen) return;
         var point = WinForms.Cursor.Position;
         var foreground = Native.ForegroundProcess();
         if (card is { IsClosed: false })
