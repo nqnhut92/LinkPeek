@@ -101,7 +101,7 @@ public sealed class PopoverPlacementTests
     }
 
     [Fact]
-    public void ManualCardsPointAtTheCursor()
+    public void ThinAnchorPointsAtThePointer()
     {
         var cursor = new Point(800, 500);
         var thin = new Rectangle(cursor, new Size(1, 12));

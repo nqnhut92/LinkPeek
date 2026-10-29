@@ -136,11 +136,11 @@ internal sealed class TrayApplication : IDisposable
         var old = card; card = null; old?.Close();
     }
 
-    private void ShowCard(WebLink link, Rectangle bounds, Point point, bool manual)
+    private void ShowCard(WebLink link, Rectangle bounds, Point point)
     {
         CloseCard(); anchor = bounds; anchorProcess = Native.ForegroundProcess(); outsideSince = TimeSpan.Zero;
         captureUntil = TimeSpan.Zero; App.FollowSystemTheme();
-        var current = new CardWindow(link, client, approvals, preferences with { }, manual,
+        var current = new CardWindow(link, client, approvals, preferences with { },
             () => suppressed = link.Text,
             () => tray.ShowBalloonTip(3000, "LinkPeek", "Azure DevOps verified your approval.", WinForms.ToolTipIcon.Info));
         card = current;
@@ -160,7 +160,7 @@ internal sealed class TrayApplication : IDisposable
         var foreground = Native.ForegroundProcess();
         if (card is { IsClosed: false })
         {
-            if (card.Manual || card.Busy || clock.Elapsed < captureUntil) return;
+            if (card.Busy || clock.Elapsed < captureUntil) return;
             if (card.ScreenBounds.Contains(point) || (anchor.Contains(point) && foreground == anchorProcess))
             { outsideSince = TimeSpan.Zero; return; }
             if (outsideSince == TimeSpan.Zero) outsideSince = clock.Elapsed;
@@ -183,7 +183,7 @@ internal sealed class TrayApplication : IDisposable
                 if (suppressed is not null && key != suppressed) suppressed = null;
                 gate.Observe(key == suppressed ? null : key, clock.Elapsed);
                 if (allowed && gate.Start(clock.Elapsed, TimeSpan.FromMilliseconds(preferences.DelayMs)))
-                { ShowCard(result!.Link, result.Bounds, point, false); return; }
+                { ShowCard(result!.Link, result.Bounds, point); return; }
             }
             else gate.Reset();
         }

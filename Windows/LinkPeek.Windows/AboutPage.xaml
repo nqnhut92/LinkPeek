@@ -83,7 +83,7 @@
                 <ui:CardControl.Header>
                     <StackPanel>
                         <ui:TextBlock Text="Link detection" />
-                        <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="Uses each app's UI Automation and MSAA hyperlink information. No screen pixels or message text are read. Use Open link… from the tray icon when an app does not expose a link." />
+                        <ui:TextBlock Style="{StaticResource SettingsDescriptionStyle}" Text="Uses each app's UI Automation and MSAA hyperlink information. No screen pixels or message text are read." />
                     </StackPanel>
                 </ui:CardControl.Header>
             </ui:CardControl>

@@ -26,21 +26,18 @@ internal sealed partial class CardWindow : Window
     private bool placed;
     private bool busy;
     public bool Busy => busy;
-    public bool Manual { get; }
     public bool IsClosed { get; private set; }
 
     // With PR cards switched off, pull request links get the same QR card as any other link.
     private PullRequestLink? Pr => preferences.PrCardEnabled ? link.PullRequest : null;
 
     public CardWindow(WebLink link, AzureDevOpsClient? client, ApprovalService? approvals,
-        Preferences preferences, bool manual, Action copied, Action notify, Snapshot? previewSnapshot = null)
+        Preferences preferences, Action copied, Action notify, Snapshot? previewSnapshot = null)
     {
         this.link = link; this.client = client; this.approvals = approvals;
-        this.preferences = preferences; this.copied = copied; this.notify = notify; Manual = manual;
+        this.preferences = preferences; this.copied = copied; this.notify = notify;
         InitializeComponent();
-        ShowActivated = manual;
-        // Hover cards close by moving away or Esc; a card opened with Open link… stays until closed.
-        if (manual) { CloseButton.Visibility = Visibility.Visible; CloseButton.Click += (_, _) => Close(); }
+        ShowActivated = false; // Hover cards close by moving away or Esc.
         Caption.Text = Pr is null ? "LINK QR" : "AZURE DEVOPS PULL REQUEST";
         Heading.Text = Pr is { } pr ? $"Pull request #{pr.Id}" : link.Uri.Host;
         if (Pr is null)
@@ -243,7 +240,7 @@ internal sealed partial class CardWindow : Window
 
     public void Place(Drawing.Rectangle anchor, Drawing.Point point)
     {
-        this.anchor = anchor.IsEmpty ? new Drawing.Rectangle(point, new Drawing.Size(1, 12)) : anchor;
+        this.anchor = anchor;
         pointer = point; placed = true;
         // Create the window on the pointer's monitor so WPF picks that monitor's DPI before layout.
         var handle = new WindowInteropHelper(this).EnsureHandle();
@@ -283,7 +280,7 @@ internal sealed partial class CardWindow : Window
         base.OnSourceInitialized(e);
         var handle = new WindowInteropHelper(this).Handle;
         var style = GetWindowLongPtr(handle, -20).ToInt64() | 0x00000080; // WS_EX_TOOLWINDOW
-        if (!Manual) style |= 0x08000000; // WS_EX_NOACTIVATE: hover cards never take focus.
+        style |= 0x08000000; // WS_EX_NOACTIVATE: hover cards never take focus.
         SetWindowLongPtr(handle, -20, new IntPtr(style));
     }
 

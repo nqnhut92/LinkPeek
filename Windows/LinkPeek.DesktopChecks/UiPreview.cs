@@ -58,16 +58,16 @@ internal static class UiPreview
             }
 
             var web = WebLink.Parse("https://github.com/nqnhut92/LinkPeek?tab=readme#install")!;
-            Card(new CardWindow(web, null, null, new Preferences(), true, () => { }, () => { }), "card-qr");
+            Card(new CardWindow(web, null, null, new Preferences(), () => { }, () => { }), "card-qr");
             var prLink = WebLink.Parse("https://dev.azure.com/contoso/Platform/_git/linkpeek/pullrequest/142")!;
             var snapshot = new Snapshot(new PullRequest(142, "Make links feel at home on Windows", "active", false,
                 new Commit(new string('a', 40)), new Repository("sample", "linkpeek"), new Person("sample", "Alex Chen"),
                 "refs/heads/feature/windows", "refs/heads/main"), "preview", 0);
-            Card(new CardWindow(prLink, null, null, new Preferences(), true, () => { }, () => { }, snapshot), "card-pull-request");
-            Card(new CardWindow(prLink, null, null, new Preferences { SkipConfirmation = true }, true, () => { }, () => { }, snapshot),
+            Card(new CardWindow(prLink, null, null, new Preferences(), () => { }, () => { }, snapshot), "card-pull-request");
+            Card(new CardWindow(prLink, null, null, new Preferences { SkipConfirmation = true }, () => { }, () => { }, snapshot),
                 "card-pull-request-no-confirmation");
             // No client: the card shows the configuration error state without network access.
-            Card(new CardWindow(prLink, null, null, new Preferences(), true, () => { }, () => { }), "card-pull-request-not-configured");
+            Card(new CardWindow(prLink, null, null, new Preferences(), () => { }, () => { }), "card-pull-request-not-configured");
             // Hover cards are placed against a link; the arrow faces it from below or above.
             var work = System.Windows.Forms.Screen.PrimaryScreen!.WorkingArea;
             Card(Placed(web, new System.Drawing.Rectangle(work.Left + 220, work.Top + 80, 170, 18)), "card-qr-below-link");
@@ -76,14 +76,12 @@ internal static class UiPreview
             besideCard.WorkAreaOverride = new System.Drawing.Rectangle(work.Left, work.Top, work.Width, 520);
             Card(besideCard, "card-qr-beside-link");
 
-            var open = new OpenLinkWindow(); Open(open); open.PreviewInvalid("ftp://example.org"); Pump();
-            Capture(open, theme, "open-link"); open.Close();
             var confirm = DialogWindow.PreviewConfirmation(); Open(confirm); Capture(confirm, theme, "dialog-approve"); confirm.Close();
             Menu(theme);
 
             CardWindow Placed(WebLink link, System.Drawing.Rectangle anchor)
             {
-                var card = new CardWindow(link, null, null, new Preferences(), false, () => { }, () => { });
+                var card = new CardWindow(link, null, null, new Preferences(), () => { }, () => { });
                 card.Place(anchor, new System.Drawing.Point(anchor.Left + 40, anchor.Top + 9));
                 return card;
             }
@@ -229,7 +227,7 @@ internal static class UiPreview
         var report = new List<string>();
         void Check(string name, System.Drawing.Rectangle anchor, ArrowSide[] expected, System.Drawing.Rectangle? area = null)
         {
-            var card = new CardWindow(link, null, null, new Preferences(), false, () => { }, () => { }) { WorkAreaOverride = area };
+            var card = new CardWindow(link, null, null, new Preferences(), () => { }, () => { }) { WorkAreaOverride = area };
             card.Place(anchor, new System.Drawing.Point(anchor.Left + Math.Min(40, anchor.Width / 2), anchor.Top + anchor.Height / 2));
             card.ShowActivated = false; card.Show(); Pump(TimeSpan.FromMilliseconds(300));
             var bounds = card.ScreenBounds; var arrow = card.Arrow; var screen = area ?? work;
@@ -302,7 +300,7 @@ internal static class UiPreview
         void Cycle(int i)
         {
             App.FollowSystemTheme();
-            var card = new CardWindow(i % 2 == 0 ? web : pr, null, null, new Preferences(), false, () => { }, () => { });
+            var card = new CardWindow(i % 2 == 0 ? web : pr, null, null, new Preferences(), () => { }, () => { });
             card.Place(new System.Drawing.Rectangle(200 + i % 50, 200, 120, 18), new System.Drawing.Point(210 + i % 50, 205));
             card.Show(); App.DoEvents();
             if (card.ScreenBounds.IsEmpty) throw new InvalidOperationException("Card has no screen bounds after Show.");

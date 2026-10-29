@@ -57,22 +57,6 @@
                         FontSize="11"
                         FontWeight="SemiBold"
                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                    <ui:Button
-                        x:Name="CloseButton"
-                        Width="28"
-                        Height="28"
-                        Margin="0,-6,-10,-6"
-                        Padding="0"
-                        HorizontalAlignment="Right"
-                        Appearance="Transparent"
-                        AutomationProperties.Name="Close card"
-                        BorderThickness="0"
-                        ToolTip="Close"
-                        Visibility="Collapsed">
-                        <ui:Button.Icon>
-                            <ui:SymbolIcon FontSize="12" Symbol="Dismiss24" />
-                        </ui:Button.Icon>
-                    </ui:Button>
                 </Grid>
                 <ui:TextBlock
                     x:Name="Heading"
