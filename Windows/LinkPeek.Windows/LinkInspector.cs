@@ -38,6 +38,21 @@ internal static class LinkInspector
             Native.GetWindowThreadProcessId(foregroundWindow, out var windowProcess);
             var sameRoot = Native.SameRoot(Native.WindowFromPoint(point), foregroundWindow);
             if (windowProcess != foreground || !sameRoot) return null;
+            if (ReadUia(point, foreground, foregroundWindow) is { } uiaLink) return uiaLink;
+        }
+        catch (Exception e) when (IsAccessibilityFailure(e)) { }
+        // UI Automation can refuse a window (Access is denied) that MSAA still describes.
+        try { return ReadMsaa(point, foreground); }
+        catch (Exception e) when (IsAccessibilityFailure(e)) { return null; }
+    }
+
+    private static bool IsAccessibilityFailure(Exception e) => e is ElementNotAvailableException or
+        InvalidOperationException or UnauthorizedAccessException or COMException or System.ComponentModel.Win32Exception;
+
+    private static Inspection? ReadUia(Point point, uint foreground, IntPtr foregroundWindow)
+    {
+        try
+        {
             var hit = AutomationElement.FromPoint(new System.Windows.Point(point.X, point.Y));
             if (hit is null) return null;
             // WebView2/Chromium can expose elements from a renderer process. Scope
@@ -84,11 +99,9 @@ internal static class LinkInspector
                     child = walker.GetNextSibling(child);
                 }
             }
-            if (ReadMsaa(point, foreground) is { } accessibleLink) return accessibleLink;
+            return null;
         }
-        catch (Exception e) when (e is ElementNotAvailableException or InvalidOperationException or
-            UnauthorizedAccessException or COMException or System.ComponentModel.Win32Exception) { }
-        return null;
+        catch (Exception e) when (IsAccessibilityFailure(e)) { return null; }
     }
 
     [DllImport("oleacc.dll")]
