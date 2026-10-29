@@ -2,15 +2,23 @@
 
 ## 0.2.0
 
-Matches the macOS 0.2.0 hover changes.
+Matches the macOS 0.2.0 experience.
 
+**Hover rules**
 - New **QR links** page: a master switch, a built-in Grab links preset (`app.grab.com/s/*`), your own case-insensitive `*` patterns and a link tester. Other links no longer open a QR card unless **Show QR for any other link** is on.
-- The default hover delay is 800 ms and the slider covers 500–1500 ms. A one-time migration moves the old 500 ms default to 800 ms. Hover timing stays on the General page.
-- The tray menu now has only **Settings…** and **Quit LinkPeek**, like macOS. Open link…, Pause hover and About LinkPeek are removed.
-- The pull request card now works like the macOS card: it lists creator, repository and branches, confirms in the card (**Confirm Approve** / **Cancel**), shows **Retry** and **Configure PAT** states and no longer has a Refresh button. The QR card buttons are **Copy Link** and **Copy QR**.
-- Hover keeps working in other apps while Settings is open.
-- Hover falls back to MSAA when UI Automation is refused for a window (Access is denied).
 - **Azure DevOps → Show PR card on hover** turns pull request cards off; those links then follow the QR rules.
+- The default hover delay is 800 ms and the slider covers 500–1500 ms. A one-time migration moves the old 500 ms default to 800 ms. Hover timing stays on the General page.
+
+**Cards**
+- The pull request card works like the macOS card: caption, title, creator, repository and branches, one status line, and one full-width action. **Approve** asks for **Confirm Approve** or **Cancel** inside the card. **Retry** and **Configure PAT** appear for errors and missing setup, errors show in red, and the card stays for three seconds after a successful approval. There is no Refresh button or confirmation dialog any more.
+- The QR card buttons are **Copy Link** and **Copy QR**.
+
+**Tray**
+- The tray menu has only **Settings…** and **Quit LinkPeek**, like macOS. Open link…, Pause hover and About LinkPeek are removed (About stays in Settings).
+
+**Fixes**
+- Hover keeps working in other apps while Settings is open.
+- Hover falls back to MSAA when UI Automation is refused for a window (Access is denied), and no longer floods `crash.log` with unobserved task errors.
 
 ## 0.1.1
 
