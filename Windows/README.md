@@ -48,7 +48,7 @@ Prefer Windows assets in [Releases](https://github.com/nqnhut92/LinkPeek/release
 Download the matching `.zip.sha256` alongside a release ZIP. In PowerShell, from that folder:
 
 ```powershell
-$zip = 'LinkPeek-Windows-0.2.0-win-x64.zip' # substitute the downloaded version/architecture
+$zip = 'LinkPeek-Windows-0.2.1-win-x64.zip' # substitute the downloaded version/architecture
 $expected = ((Get-Content "$zip.sha256" -Raw).Trim() -split '\s+')[0]
 $actual = (Get-FileHash $zip -Algorithm SHA256).Hash
 if ($actual -ne $expected) { throw 'SHA-256 mismatch; do not use this download.' }

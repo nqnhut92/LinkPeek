@@ -1,5 +1,12 @@
 # Windows changes
 
+## 0.2.1
+
+Matches the macOS 0.2.1 fix.
+
+**Fixes**
+- The pull request card offers **Approve** again after new commits reset your vote. Before, a PR you had approved with LinkPeek showed a disabled **New Commits** button once the author pushed and Azure DevOps cleared your vote, until you restarted the app. **New Commits** now appears only while your earlier approval still stands on the new head.
+
 ## 0.2.0
 
 Matches the macOS 0.2.0 experience.

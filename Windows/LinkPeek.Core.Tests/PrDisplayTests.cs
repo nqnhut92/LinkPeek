@@ -29,11 +29,19 @@ public sealed class PrDisplayTests
         Assert.Equal(PrDisplayState.Draft, PrDisplay.Resolve(Snap(draft: true), null));
     }
 
-    [Fact]
-    public void NewCommitsSinceMyReviewBlockApproval()
+    // The reviewed head is the one this app approved earlier; the snapshot's head is newer.
+    [Theory]
+    [InlineData(10, PrDisplayState.NewCommits)]
+    [InlineData(5, PrDisplayState.NewCommits)]
+    [InlineData(0, PrDisplayState.Approve)]
+    [InlineData(-5, PrDisplayState.WaitingForAuthor)]
+    [InlineData(-10, PrDisplayState.Rejected)]
+    public void StaleReviewOnlyWarnsWhileTheApprovalStillStands(int vote, PrDisplayState expected)
     {
-        Assert.Equal(PrDisplayState.NewCommits, PrDisplay.Resolve(Snap(), new string('b', 40)));
-        Assert.Equal(PrDisplayState.Approve, PrDisplay.Resolve(Snap(), Head));
+        var older = new string('b', 40);
+        Assert.Equal(expected, PrDisplay.Resolve(Snap(vote: vote), older));
+        Assert.NotEqual(PrDisplayState.NewCommits, PrDisplay.Resolve(Snap(vote: vote), Head));
+        Assert.NotEqual(PrDisplayState.NewCommits, PrDisplay.Resolve(Snap(vote: vote), null));
     }
 
     [Fact]

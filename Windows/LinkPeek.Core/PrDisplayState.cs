@@ -36,7 +36,8 @@ public static class PrDisplay
         if (snapshot.Pr.Status == "abandoned") return PrDisplayState.Abandoned;
         if (snapshot.Pr.Status != "active") return PrDisplayState.Unavailable;
         if (snapshot.Pr.IsDraft) return PrDisplayState.Draft;
-        if (reviewedHead is not null && reviewedHead != snapshot.Head) return PrDisplayState.NewCommits;
+        // A vote that Azure DevOps already reset on the new commits leaves nothing to warn about.
+        if (reviewedHead is not null && reviewedHead != snapshot.Head && snapshot.Vote is 10 or 5) return PrDisplayState.NewCommits;
         return snapshot.Vote switch
         {
             10 => PrDisplayState.Approved,

@@ -36,6 +36,21 @@ public sealed class ApprovalTests
         Assert.Equal(1, client.Votes);
     }
 
+    [Fact]
+    public async Task CanApproveAgainAfterNewCommitsResetTheVote()
+    {
+        var client = new FakeClient(State(), State(), State(vote: 10), State("b"), State("b"), State("b", 10));
+        var service = new ApprovalService(client);
+        var first = await service.ApproveAsync(await service.PrepareAsync(Link, State(), default), default);
+        Assert.Equal(PrDisplayState.Approved, PrDisplay.Resolve(first, service.ReviewedHead(Link, first)));
+        var reset = State("b");
+        Assert.Equal(PrDisplayState.Approve, PrDisplay.Resolve(reset, service.ReviewedHead(Link, reset)));
+        var second = await service.ApproveAsync(await service.PrepareAsync(Link, reset, default), default);
+        Assert.Equal(10, second.Vote);
+        Assert.Equal(second.Head, service.ReviewedHead(Link, second));
+        Assert.Equal(2, client.Votes);
+    }
+
     [Theory]
     [InlineData("active", false, 0, "Active · Your vote: No vote")]
     [InlineData("active", true, 0, "Draft · Your vote: No vote")]
