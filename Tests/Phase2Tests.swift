@@ -287,6 +287,33 @@ private func setup(_ mock: MockTransport = MockTransport(), clock: TestClock = T
   #expect(await service.state(PRKey(testLink), snapshot: updated) == .newCommits)
 }
 
+@Test func staleReviewIsIgnoredWhenVoteWasReset() async throws {
+  let (_, service, mock, _) = try setup()
+  let first = try await service.prepare(PRKey(testLink), displayedHead: headA)
+  _ = try await service.approve(first, explicitlyConfirmed: true)
+  await mock.configure(heads: [headB], vote: 0)
+  let reset = try await service.snapshot(PRKey(testLink), force: true)
+  #expect(await service.state(PRKey(testLink), snapshot: reset) == .approve)
+  let second = try await service.prepare(PRKey(testLink), displayedHead: headB)
+  let approved = try await service.approve(second, explicitlyConfirmed: true)
+  #expect(approved.vote == 10)
+}
+@Test(arguments: [10, 5, 0, -5, -10]) func staleReviewedHeadResolution(_ vote: Int) async throws {
+  let (client, _, mock, _) = try setup()
+  await mock.configure(heads: [headB], vote: vote)
+  let snapshot = try await client.snapshot(PRKey(testLink))
+  let expected: PRDisplayState =
+    switch vote {
+    case 10, 5: .newCommits
+    case 0: .approve
+    case -5: .waitingForAuthor
+    default: .rejected
+    }
+  #expect(PRDisplayState.resolve(snapshot, reviewedHead: headA) == expected)
+  #expect(PRDisplayState.resolve(snapshot, reviewedHead: headB) != .newCommits)
+  #expect(PRDisplayState.resolve(snapshot, reviewedHead: nil) != .newCommits)
+}
+
 @Test func finalSHARevalidationBeforePUT() async throws {
   let (_, service, mock, _) = try setup()
   await mock.configure(heads: [headA, headA, headB])

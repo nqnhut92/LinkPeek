@@ -28,7 +28,7 @@ enum PRDisplayState: String, Sendable {
     if snapshot.pr.status == "abandoned" { return .abandoned }
     if snapshot.pr.status != "active" { return .unavailable }
     if snapshot.pr.isDraft == true { return .draft }
-    if let reviewedHead, reviewedHead != snapshot.pr.head { return .newCommits }
+    if let reviewedHead, reviewedHead != snapshot.pr.head, snapshot.approved { return .newCommits }
     switch snapshot.vote {
     case 10: return .approved
     case 5: return .approvedWithSuggestions

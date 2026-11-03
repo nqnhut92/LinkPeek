@@ -8,7 +8,7 @@ LinkPeek is an accessory macOS app with a link symbol in the menu bar. Opening S
 
 `LinkPeek.xcodeproj` builds the `LinkPeek` scheme, target, executable and `LinkPeek.app`. The Swift package and testable library module also use `LinkPeek`. The bundle identifier is `com.linkpeek.app`. The Xcode scheme has no test target; `swift test` exercises the package core and excludes the app/UI source.
 
-The project uses `PRODUCT_NAME = $(TARGET_NAME)`, marketing version `0.2.0`, and a build phase stamps the built bundle's `CFBundleVersion` with the local build time (`YYYYMMDD.HHMMSS`). About reads that bundle metadata and displays `Version 0.2.0 (build-YYYYMMDD.HHMMSS)`. The source build fallback remains `1`.
+The project uses `PRODUCT_NAME = $(TARGET_NAME)`, marketing version `0.2.1`, and a build phase stamps the built bundle's `CFBundleVersion` with the local build time (`YYYYMMDD.HHMMSS`). About reads that bundle metadata and displays `Version 0.2.1 (build-YYYYMMDD.HHMMSS)`. The source build fallback remains `1`.
 
 The approved icon is a petrol blue rounded square with two white chain links and a small preview card. It was generated and prepared with ImageGen. `Resources/AppIcon.png` is the 1024px master; `Assets.xcassets/AppIcon.appiconset` contains all ten macOS size/scale variants. No third-party brand logo is embedded.
 

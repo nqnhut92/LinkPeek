@@ -29,7 +29,7 @@ If Windows assets are not published yet, download a completed build from [Action
 
 To update, quit LinkPeek and replace the app in Applications. Release builds use a stable signing identity to help preserve granted permissions across updates. A development or ad-hoc build has a different signing identity and may require granting permissions again. About displays the running version and build.
 
-Each release ZIP has a matching `.sha256` file. To check a download, put both files in the same folder and run `shasum -a 256 -c LinkPeek-0.2.0.zip.sha256` there (substitute the release version).
+Each release ZIP has a matching `.sha256` file. To check a download, put both files in the same folder and run `shasum -a 256 -c LinkPeek-0.2.1.zip.sha256` there (substitute the release version).
 
 ## Run on macOS
 
@@ -65,7 +65,7 @@ Enable **Settings → General → Launch at login** to start LinkPeek when signi
 
 ## macOS app identity and version
 
-The project, scheme, executable, Swift module and application are named **LinkPeek** (`LinkPeek.xcodeproj`, `LinkPeek.app`). The bundle identifier is `com.linkpeek.app`. The marketing version is separate from the timestamp build number; About shows `Version 0.2.0 (build-YYYYMMDD.HHMMSS)`, read from the built bundle.
+The project, scheme, executable, Swift module and application are named **LinkPeek** (`LinkPeek.xcodeproj`, `LinkPeek.app`). The bundle identifier is `com.linkpeek.app`. The marketing version is separate from the timestamp build number; About shows `Version 0.2.1 (build-YYYYMMDD.HHMMSS)`, read from the built bundle.
 
 When upgrading from PR Hover, known preferences are copied once where LinkPeek has no saved value. The original Keychain service is retained to preserve PATs. Grant Accessibility to the renamed app and enable Launch at login for LinkPeek if needed. Quit old copies before running the renamed app.
 
