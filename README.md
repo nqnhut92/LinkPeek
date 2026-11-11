@@ -69,6 +69,18 @@ The project, scheme, executable, Swift module and application are named **LinkPe
 
 When upgrading from PR Hover, known preferences are copied once where LinkPeek has no saved value. The original Keychain service is retained to preserve PATs. Grant Accessibility to the renamed app and enable Launch at login for LinkPeek if needed. Quit old copies before running the renamed app.
 
+## Support
+
+- **International:** [Support on Ko-fi](https://ko-fi.com/nqnhut92)
+- **Vietnam (MoMo / VietQR):**
+
+<details>
+<summary>Show MoMo / VietQR code (0% fee · scan with any Vietnamese banking app)</summary>
+
+<img src=".github/support-qr.png" alt="MoMo and VietQR code" width="240">
+
+</details>
+
 ## License
 
 LinkPeek is licensed under the [MIT License](LICENSE). The macOS app also shows it in Settings → About → MIT License. Windows packages include the project license, QRCoder and WPF UI notices and bundled .NET runtime licenses.
